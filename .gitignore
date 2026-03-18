@@ -1,0 +1,14 @@
+# Environnement Python
+.env
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Logs et alertes (pas necessaire dans le depot)
+*.log
+alerte_*.json
+gtc_changes.json
+
+# Fichiers temporaires
+.DS_Store

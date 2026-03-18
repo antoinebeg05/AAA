@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biogenie — Veille GTC</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f8f9fa;--bg3:#f1f3f5;--border:#e9ecef;--border2:#dee2e6;
+  --text:#1a1a2e;--text2:#495057;--text3:#868e96;
+  --green:#2f9e44;--green-dim:#ebfbee;--green-border:#8ce99a;
+  --amber:#e67700;--amber-dim:#fff9db;--amber-border:#ffd43b;
+  --red:#c92a2a;--red-dim:#fff5f5;--red-border:#ffa8a8;
+  --blue:#1971c2;--blue-dim:#e7f5ff;--blue-border:#74c0fc;
+  --purple:#6741d9;--purple-dim:#f3f0ff;--purple-border:#b197fc;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;border-bottom:1px solid var(--border);background:#fff;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:30px;height:30px;background:var(--green);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.logo-name{font-size:15px;font-weight:700;color:var(--text)}
+.logo-sub{font-size:11px;color:var(--text3)}
+.hright{display:flex;align-items:center;gap:8px}
+.live-badge{display:flex;align-items:center;gap:5px;background:var(--green-dim);border:1px solid var(--green-border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green)}
+.dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-time{font-size:11px;color:var(--text3)}
+.nav-tabs{display:flex;gap:2px;background:var(--bg2);border-radius:8px;padding:3px}
+.tab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);border:none;background:transparent;transition:all .15s}
+.tab.on{background:#fff;color:var(--text);box-shadow:var(--shadow)}
+.tab-count{display:inline-block;background:var(--purple);color:#fff;border-radius:20px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:2px;vertical-align:middle}
+.db-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.db-on{background:#d4f1e8;color:#1a7a50;border:1px solid #6fcfb0}
+.db-off{background:var(--bg2);color:var(--text3);border:1px solid var(--border)}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:260px 1fr 380px;height:calc(100vh - 56px)}
+
+/* FILTRES */
+.filters-col{border-right:1px solid var(--border);overflow-y:auto;padding:16px;background:var(--bg2)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;box-shadow:var(--shadow)}
+.stat-val{font-size:22px;font-weight:700}
+.stat-val.g{color:var(--green)}.stat-val.a{color:var(--amber)}.stat-val.r{color:var(--red)}.stat-val.b{color:var(--blue)}
+.stat-label{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.f-section{margin-bottom:14px}
+.f-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block}
+.f-input,.f-select{width:100%;background:#fff;border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-family:inherit;font-size:12px;outline:none;transition:border-color .15s;box-shadow:var(--shadow)}
+.f-input:focus,.f-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim)}
+.f-input::placeholder{color:var(--text3)}
+.btn-group{display:flex;gap:4px;flex-wrap:wrap}
+.gbtn{padding:5px 10px;border-radius:5px;border:1px solid var(--border2);background:#fff;font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.gbtn:hover{border-color:var(--blue);color:var(--blue)}
+.gbtn.on-green{border-color:var(--green-border);background:var(--green-dim);color:var(--green)}
+.gbtn.on-red{border-color:var(--red-border);background:var(--red-dim);color:var(--red)}
+.gbtn.on-blue{border-color:var(--blue-border);background:var(--blue-dim);color:var(--blue)}
+.milieu-row{display:flex;gap:12px}
+.chk{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer}
+.chk input{accent-color:var(--blue)}
+.search-btn{width:100%;padding:9px;border-radius:6px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;box-shadow:var(--shadow);transition:background .15s}
+.search-btn:hover{background:#1864ab}
+.reset-link{display:block;text-align:center;font-size:11px;color:var(--text3);cursor:pointer;margin-top:8px;text-decoration:underline}
+.reset-link:hover{color:var(--red)}
+
+/* LISTE */
+.list-col{overflow-y:auto;background:#fff}
+.list-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:10}
+.list-title{font-size:12px;font-weight:600;color:var(--text2)}
+.list-controls{display:flex;align-items:center;gap:6px}
+.result-count{font-size:11px;color:var(--text3)}
+.sort-select{padding:4px 8px;border-radius:5px;border:1px solid var(--border2);background:#fff;font-size:11px;color:var(--text2);cursor:pointer;outline:none;font-family:inherit}
+.icon-btn{padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:#fff;font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.icon-btn:hover{border-color:var(--blue);color:var(--blue)}
+.terrain-list{padding:8px}
+.tcard{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:all .15s;margin-bottom:6px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.tcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.tcard.nouveau::before{background:var(--amber)}
+.tcard.traite::before{background:var(--green)}
+.tcard.archive::before{background:var(--text3)}
+.tcard.connu::before{background:var(--border2)}
+.tcard:hover,.tcard.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim)}
+.tcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;gap:8px}
+.tcard-name{font-size:13px;font-weight:600;color:var(--text);flex:1;line-height:1.3}
+.tcard-badges{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pill-new{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-border)}
+.pill-traite{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+.pill-archive{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
+.pill-connu{background:var(--bg2);color:var(--text3);border:1px solid var(--border)}
+.tcard-mun{font-size:11px;color:var(--text3);margin-bottom:5px}
+.tcard-tags{display:flex;gap:4px;flex-wrap:wrap}
+.ttag{font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text2)}
+.ttag.contam{background:var(--amber-dim);border-color:var(--amber-border);color:var(--amber)}
+.ttag.statut{background:var(--blue-dim);border-color:var(--blue-border);color:var(--blue)}
+.ttag.pipeline{background:var(--purple-dim);border-color:var(--purple-border);color:var(--purple)}
+.no-results{padding:40px;text-align:center;color:var(--text3);font-size:12px;line-height:1.8}
+
+/* SCORE */
+/* Statut réhabilitation — code couleur */
+.pill-red   {background:var(--red-dim);color:var(--red);border:1px solid var(--red-border)}
+.pill-orange{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-border)}
+.pill-green2{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+.pill-grey  {background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
+
+/* ═══════════════════════════════════════════
+   PANNEAU DÉTAIL — NOUVEAU DESIGN
+═══════════════════════════════════════════ */
+.detail-col{border-left:1px solid var(--border);background:#fff;overflow-y:auto;display:flex;flex-direction:column}
+
+/* En-tête terrain */
+.d-header{padding:16px 18px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:10}
+.d-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.d-header-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.35;flex:1}
+.d-header-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.d-header-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+
+/* Bannieres statut */
+.banner{border-radius:6px;padding:7px 12px;font-size:11px;font-weight:500;margin:12px 18px 0}
+.banner-new{background:var(--amber-dim);border:1px solid var(--amber-border);color:var(--amber)}
+.banner-traite{background:var(--green-dim);border:1px solid var(--green-border);color:var(--green)}
+.banner-archive{background:var(--bg2);border:1px solid var(--border2);color:var(--text3)}
+
+/* ── PIPELINE ──────────────────────────── */
+.pipeline-wrap{padding:14px 18px 12px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.pipeline-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.pipeline{display:flex;align-items:flex-start}
+.p-step{display:flex;flex-direction:column;align-items:center;cursor:pointer;flex:1;min-width:0}
+.p-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid var(--border2);background:#fff;color:var(--text3);transition:all .2s;position:relative;z-index:1;flex-shrink:0}
+.p-step.done .p-dot{background:var(--green);border-color:var(--green);color:#fff}
+.p-step.current .p-dot{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 3px var(--blue-dim)}
+.p-step.won .p-dot{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 0 0 3px var(--green-dim)}
+.p-step:hover:not(.done):not(.current) .p-dot{border-color:var(--blue);color:var(--blue)}
+.p-label{font-size:9px;color:var(--text3);text-align:center;margin-top:4px;font-weight:500;line-height:1.25;padding:0 2px;word-break:break-word}
+.p-step.current .p-label{color:var(--blue);font-weight:700}
+.p-step.done .p-label{color:var(--green)}
+.p-step.won .p-label{color:var(--green);font-weight:700}
+.p-line{flex:1;height:2px;background:var(--border2);margin-top:11px;transition:background .2s;min-width:4px}
+.p-line.done{background:var(--green)}
+
+/* ── SECTIONS ──────────────────────────── */
+.d-section{padding:14px 18px;border-bottom:1px solid var(--border)}
+.d-section-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.d-section-title span{font-size:13px}
+
+/* Info terrain */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.i-field{display:flex;flex-direction:column;gap:2px}
+.i-field.full{grid-column:1/-1}
+.i-label{font-size:10px;color:var(--text3);font-weight:500}
+.i-val{font-size:12px;color:var(--text);line-height:1.4}
+.i-val.contam{color:var(--amber);font-weight:500}
+.i-val.ok{color:var(--green);font-weight:600}
+.i-val.nok{color:var(--red);font-weight:600}
+.i-val.enc{color:var(--amber);font-weight:600}
+.i-val.mono{font-family:monospace;font-size:11px;color:var(--text2)}
+.maps-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);text-decoration:none;margin-top:2px}
+.maps-link:hover{text-decoration:underline}
+
+/* Score */
+.score-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);margin-bottom:12px}
+.score-row .score-badge{font-size:15px;padding:5px 12px}
+.score-reasons{font-size:11px;color:var(--text3);line-height:1.5}
+.score-reasons b{color:var(--text2)}
+
+/* Contact */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.c-field{display:flex;flex-direction:column;gap:3px}
+.c-field.full{grid-column:1/-1}
+.c-label{font-size:10px;color:var(--text3);font-weight:500}
+.c-input{background:var(--bg2);border:1px solid var(--border2);border-radius:5px;padding:7px 9px;font-size:12px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s,background .15s;width:100%}
+.c-input:focus{border-color:var(--blue);background:#fff}
+.c-input::placeholder{color:var(--text3)}
+
+/* Note */
+.note-area{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:9px 11px;font-size:12px;color:var(--text);font-family:inherit;resize:none;min-height:80px;outline:none;transition:border-color .15s,background .15s;box-sizing:border-box}
+.note-area:focus{border-color:var(--blue);background:#fff}
+.note-area::placeholder{color:var(--text3)}
+.save-btn{width:100%;padding:9px;border-radius:6px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .15s}
+.save-btn:hover{background:#1864ab}
+.save-btn.saved{background:var(--green)}
+
+/* Actions */
+.actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.act-btn{padding:11px 8px;border-radius:8px;border:1px solid var(--border2);background:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s;text-align:center;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:5px}
+.act-icon{font-size:18px;line-height:1}
+.act-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
+.act-btn.act-green{background:var(--green-dim);border-color:var(--green-border);color:var(--green)}
+.act-btn.act-green:hover{background:var(--green);color:#fff;border-color:var(--green)}
+.act-btn.act-red{background:var(--red-dim);border-color:var(--red-border);color:var(--red)}
+.act-btn.act-red:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.act-btn.act-full{grid-column:1/-1}
+.act-btn.act-grey{background:var(--bg2);border-color:var(--border2);color:var(--text3)}
+.act-btn.act-grey:hover{background:var(--text3);color:#fff;border-color:var(--text3)}
+
+/* Historique */
+.hist-toggle{padding:12px 18px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center;font-family:inherit;border-bottom:1px solid var(--border)}
+.hist-toggle:hover{color:var(--text2);background:var(--bg2)}
+.hist-items{padding:0 18px 14px;display:none}
+.hist-items.open{display:block}
+.hist-item{padding:8px 10px;background:var(--bg2);border-radius:6px;margin-top:8px;font-size:11px;line-height:1.5}
+.hist-date{font-size:10px;color:var(--text3);margin-bottom:2px}
+.hist-note{color:var(--text2)}
+
+/* Vide */
+.d-empty{padding:48px 24px;text-align:center;color:var(--text3);font-size:12px;line-height:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.d-empty-icon{font-size:36px;margin-bottom:12px;opacity:.4}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;box-shadow:var(--shadow-md)}
+
+/* ─── CARTE ──────────────────────────────────────────── */
+#mapDiv{grid-column:2;grid-row:1;display:none;overflow:hidden}
+.leaflet-popup-content-wrapper{font-family:'Inter',-apple-system,sans-serif!important;border-radius:8px!important;box-shadow:var(--shadow-md)!important}
+.leaflet-popup-content{margin:12px 14px!important;min-width:160px}
+.pop-addr{font-weight:700;color:var(--text);margin-bottom:3px;font-size:12px}
+.pop-mun{font-size:10px;color:var(--text3);margin-bottom:3px}
+.pop-contam{font-size:10px;color:var(--amber);margin-bottom:8px;line-height:1.3}
+.pop-btn{background:var(--blue);color:#fff;border:none;border-radius:5px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;width:100%;font-family:inherit}
+.pop-btn:hover{background:#1864ab}
+.map-legend{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;box-shadow:var(--shadow-md)}
+.legend-title{font-weight:700;color:var(--text2);margin-bottom:6px;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.legend-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;color:var(--text2)}
+.legend-dot{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);flex-shrink:0}
+.map-filter-bar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;gap:5px;flex-wrap:wrap;box-shadow:var(--shadow-md);margin:8px}
+.mf-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:#fff;font-family:'Inter',-apple-system,sans-serif;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;white-space:nowrap}
+.mf-btn:hover{border-color:var(--blue);color:var(--blue)}
+.mf-btn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.mf-count{font-size:10px;font-weight:700;background:rgba(255,255,255,.25);border-radius:20px;padding:0 5px;margin-left:3px}
+
+/* ─── STATISTIQUES ───────────────────────────────────── */
+#statsOverlay{display:none;position:fixed;top:56px;left:0;right:0;bottom:0;background:var(--bg2);overflow-y:auto;z-index:100;padding:24px}
+.stats-inner{max-width:1100px;margin:0 auto}
+.stats-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi-val{font-size:26px;font-weight:800;line-height:1}
+.kpi-val.g{color:var(--green)}.kpi-val.a{color:var(--amber)}.kpi-val.r{color:var(--red)}.kpi-val.b{color:var(--blue)}.kpi-val.p{color:var(--purple)}
+.kpi-label{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;box-shadow:var(--shadow)}
+.chart-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px}
+
+/* ─── RAPPEL DE SUIVI ────────────────────────────────── */
+.reminder-row{display:flex;gap:7px;align-items:center}
+.reminder-btn{padding:7px 14px;border-radius:5px;border:none;background:var(--blue);color:#fff;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s}
+.reminder-btn:hover{background:#1864ab}
+.reminder-info{font-size:10px;color:var(--text3);margin-top:5px}
+
+/* ─── IMPRESSION / PDF ───────────────────────────────── */
+@media print{
+  header,.filters-col,#listCol,#mapDiv,#statsOverlay,.toast,
+  .pipeline-wrap,.save-btn,.no-print,.hist-toggle{display:none!important}
+  body{height:auto!important;overflow:visible!important}
+  .app{display:block!important;height:auto!important}
+  .detail-col{border:none!important;overflow:visible!important;height:auto!important;max-width:800px;margin:0 auto}
+  .d-header{position:static!important}
+  .d-header::before{content:'BIOGENIE — Rapport terrain GTC';display:block;font-size:18px;font-weight:800;color:#2f9e44;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #2f9e44}
+  .d-section{break-inside:avoid}
+  .hist-items{display:block!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">B</div>
+    <div>
+      <div class="logo-name">Biogenie — Veille GTC</div>
+      <div class="logo-sub">Répertoire des terrains contaminés du Québec · MELCCFP</div>
+    </div>
+  </div>
+  <div class="hright">
+    <div class="nav-tabs">
+      <button class="tab on" onclick="switchTab('terrains',this)">Terrains</button>
+      <button class="tab" onclick="switchTab('archives',this)">Archivés</button>
+      <button class="tab" onclick="switchTab('action',this)">En suivi <span id="actionCount" class="tab-count"></span></button>
+      <button class="tab" onclick="switchTab('traites',this)">Traités</button>
+      <button class="tab" onclick="switchTab('carte',this)">🗺 Carte</button>
+      <button class="tab" onclick="switchTab('stats',this)">📊 Stats</button>
+    </div>
+    <div class="sync-time" id="syncTime">—</div>
+    <span class="db-badge" id="dbBadge">Local</span>
+    <div class="live-badge"><div class="dot"></div>En direct</div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ═══ FILTRES ═══ -->
+  <div class="filters-col">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val g" id="sTotal">—</div><div class="stat-label">Terrains</div></div>
+      <div class="stat-card"><div class="stat-val a" id="sNew">—</div><div class="stat-label">Nouveaux</div></div>
+      <div class="stat-card"><div class="stat-val r" id="sContam">—</div><div class="stat-label">Contaminés</div></div>
+      <div class="stat-card"><div class="stat-val b" id="sMun">—</div><div class="stat-label">Villes</div></div>
+    </div>
+
+    <div class="f-section">
+      <label class="f-label">Adresse</label>
+      <input class="f-input" id="fAdresse" placeholder="Ex: 120 rue des Pins...">
+    </div>
+    <div class="f-section">
+      <label class="f-label">Région administrative</label>
+      <select class="f-select" id="fRegion"><option value="">Toutes</option></select>
+    </div>
+    <div class="f-section">
+      <label class="f-label">Municipalité</label>
+      <select class="f-select" id="fMun"><option value="">Toutes</option></select>
+    </div>
+    <div class="f-section">
+      <label class="f-label">Nature des contaminants</label>
+      <select class="f-select" id="fContam"><option value="">Tous</option></select>
+    </div>
+    <div class="f-section">
+      <label class="f-label">Milieu récepteur</label>
+      <div class="milieu-row">
+        <label class="chk"><input type="checkbox" id="fEau"> Eau souterraine</label>
+        <label class="chk"><input type="checkbox" id="fSol"> Sol</label>
+      </div>
+    </div>
+    <div class="f-section">
+      <label class="f-label">Statut réhabilitation</label>
+      <div class="btn-group">
+        <button class="gbtn on-blue" id="sAll" onclick="setStatut('',this)">Tous</button>
+        <button class="gbtn" id="sNon" onclick="setStatut('non',this)">Non débutée</button>
+        <button class="gbtn" id="sTer" onclick="setStatut('ter',this)">Terminée</button>
+        <button class="gbtn" id="sEnc" onclick="setStatut('enc',this)">En cours</button>
+      </div>
+    </div>
+    <button class="search-btn" onclick="applyFilters()">Rechercher</button>
+    <span class="reset-link" onclick="resetFilters()">↺ Réinitialiser les filtres</span>
+  </div>
+
+  <!-- ═══ LISTE ═══ -->
+  <div class="list-col" id="listCol">
+    <div class="list-header">
+      <div class="list-title" id="listTitle">Terrains GTC</div>
+      <div class="list-controls">
+        <select class="sort-select" onchange="setSortBy(this.value)">
+          <option value="statut">🔴 Rouge en premier</option>
+          <option value="alpha">A → Z</option>
+          <option value="default">Par défaut</option>
+        </select>
+        <div class="result-count" id="resultCount">—</div>
+        <button class="icon-btn" onclick="exportCSV()">↓ CSV</button>
+      </div>
+    </div>
+    <div class="terrain-list" id="terrainList"></div>
+  </div>
+
+  <!-- ═══ CARTE ═══ -->
+  <div id="mapDiv"><div id="map" style="width:100%;height:100%"></div></div>
+
+  <!-- ═══ DÉTAIL + CRM (nouveau design) ═══ -->
+  <div class="detail-col" id="detailCol">
+    <div class="d-empty">
+      <div class="d-empty-icon">📋</div>
+      Cliquez sur un terrain<br>pour voir les détails et gérer le dossier
+    </div>
+  </div>
+
+</div>
+
+<div id="statsOverlay"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────
+// CONFIG SUPABASE — CRM partagé entre collègues
+// 1. Crée un compte gratuit sur supabase.com
+// 2. Nouveau projet → Settings > API
+// 3. Copie "Project URL" et "anon public key" ici
+// ─────────────────────────────────────────────────────
+const SUPABASE_URL = '';   // ex: https://abcxyz.supabase.co
+const SUPABASE_KEY = '';   // clé anon publique
+// ─────────────────────────────────────────────────────
+
+const db = (SUPABASE_URL && SUPABASE_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const badge = document.getElementById('dbBadge');
+  if (db) { badge.textContent = '● Supabase'; badge.className = 'db-badge db-on'; }
+  else     { badge.textContent = 'Local'; badge.className = 'db-badge db-off'; }
+});
+
+// ── Utilitaires ───────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function clean(s) {
+  // Supprime les \r\n parasites dans les adresses
+  return String(s||'').replace(/\r\n/g,' ').replace(/\r/g,' ').replace(/\n/g,' ').trim();
+}
+function jsSafe(id) {
+  return id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isError ? 'var(--red)' : 'var(--green)';
+  el.style.opacity = 1;
+  setTimeout(() => el.style.opacity = 0, 2200);
+}
+
+// ── Code couleur statut réhabilitation ────────────────
+// 🔴 Rouge  : Non débutée / Initiée
+// 🟠 Orange : En cours
+// 🟢 Vert   : Terminée
+// ⚫ Gris   : Inconnu
+function statutInfo(t) {
+  const r = (t.statut || '').toLowerCase();
+  if (r.includes('non') || r.includes('initia') || r.includes('initié'))
+    return { cls: 'pill-red',    dot: '🔴', label: 'Non débutée',  mapCol: '#c92a2a' };
+  if (r.includes('cours'))
+    return { cls: 'pill-orange', dot: '🟠', label: 'En cours',     mapCol: '#e67700' };
+  if (r.includes('termin'))
+    return { cls: 'pill-green2', dot: '🟢', label: 'Terminée',     mapCol: '#2f9e44' };
+  return   { cls: 'pill-grey',   dot: '⚫', label: t.statut || '?', mapCol: '#868e96' };
+}
+function statutPill(t) {
+  const { cls, dot, label } = statutInfo(t);
+  return `<span class="pill ${cls}">${dot} ${label}</span>`;
+}
+// Ordre de tri : Nouveaux → Non débutée → En cours → Terminée → Inconnu
+function statutOrder(t) {
+  if (NEW_IDS.has(t.id)) return 0;
+  const r = (t.statut || '').toLowerCase();
+  if (r.includes('non') || r.includes('initia')) return 1;
+  if (r.includes('cours'))                       return 2;
+  if (r.includes('termin'))                      return 3;
+  return 4;
+}
+
+// ── Pipeline commercial ───────────────────────────────
+const STAGES = ['À contacter', 'Contacté', 'En discussion', 'Devis envoyé', 'Contrat signé'];
+
+function renderPipeline(id, currentStage) {
+  const idx = STAGES.indexOf(currentStage);
+  let html = '<div class="pipeline">';
+  STAGES.forEach((s, i) => {
+    const isDone    = idx >= 0 && i < idx;
+    const isCurrent = idx === i;
+    const isWon     = currentStage === 'Contrat signé' && i === STAGES.length - 1;
+    const cls = isWon ? 'won' : isCurrent ? 'current' : isDone ? 'done' : '';
+    html += `<div class="p-step ${cls}" onclick="setPipelineStage('${jsSafe(id)}','${s}')" title="${s}">
+      <div class="p-dot">${isDone ? '✓' : i + 1}</div>
+      <div class="p-label">${s}</div>
+    </div>`;
+    if (i < STAGES.length - 1)
+      html += `<div class="p-line ${isDone ? 'done' : ''}"></div>`;
+  });
+  return html + '</div>';
+}
+
+function setPipelineStage(id, stage) {
+  if (!CRM[id]) CRM[id] = { historique: [] };
+  CRM[id].dossier = stage;
+  saveLocal();
+  saveCRMToDB(id, null);
+  renderList();
+  const t = ALL.find(x => x.id === id);
+  if (t) renderDetail(t);
+  toast('Pipeline mis à jour → ' + stage);
+}
+
+// ── État global ───────────────────────────────────────
+let ALL = [], NEW_IDS = new Set(), selectedId = null;
+let fStatut = '', currentTab = 'terrains', sortBy = 'statut';
+let CRM = {};
+let ARCHIVED = new Set(), TRAITED = new Set();
+
+try { CRM      = JSON.parse(localStorage.getItem('biogenie_crm')      || '{}'); } catch(e) { CRM = {}; }
+try { ARCHIVED = new Set(JSON.parse(localStorage.getItem('biogenie_archived') || '[]')); } catch(e) {}
+try { TRAITED  = new Set(JSON.parse(localStorage.getItem('biogenie_traited')  || '[]')); } catch(e) {}
+
+function saveLocal() {
+  try {
+    localStorage.setItem('biogenie_crm',      JSON.stringify(CRM));
+    localStorage.setItem('biogenie_archived',  JSON.stringify([...ARCHIVED]));
+    localStorage.setItem('biogenie_traited',   JSON.stringify([...TRAITED]));
+  } catch(e) {}
+}
+
+// ── Supabase ──────────────────────────────────────────
+async function loadCRMFromDB() {
+  if (!db) return;
+  try {
+    const { data: rows, error } = await db.from('crm').select('*');
+    if (error || !rows) return;
+    ARCHIVED.clear(); TRAITED.clear();
+    rows.forEach(r => {
+      CRM[r.terrain_id] = {
+        contact_nom: r.contact_nom || '', contact_tel: r.contact_tel || '',
+        contact_email: r.contact_email || '', contact_entreprise: r.contact_entreprise || '',
+        dossier: r.dossier_status || '', note: r.note || '',
+        reminder_date: r.reminder_date || '', historique: []
+      };
+      if (r.is_archived) ARCHIVED.add(r.terrain_id);
+      if (r.is_treated)  TRAITED.add(r.terrain_id);
+    });
+    const { data: hist } = await db.from('crm_historique').select('*').order('created_at', { ascending: true });
+    if (hist) hist.forEach(h => {
+      if (CRM[h.terrain_id]) CRM[h.terrain_id].historique.push({ date: h.created_at.slice(0,10), note: h.note });
+    });
+    renderList();
+  } catch(e) { console.error('Supabase chargement:', e); }
+}
+
+async function saveCRMToDB(id, newNote) {
+  if (!db) return;
+  const c = CRM[id] || {};
+  try {
+    await db.from('crm').upsert({
+      terrain_id: id, contact_nom: c.contact_nom || '', contact_tel: c.contact_tel || '',
+      contact_email: c.contact_email || '', contact_entreprise: c.contact_entreprise || '',
+      dossier_status: c.dossier || '', note: c.note || '',
+      is_archived: ARCHIVED.has(id), is_treated: TRAITED.has(id),
+      reminder_date: c.reminder_date || null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'terrain_id' });
+    if (newNote) await db.from('crm_historique').insert({ terrain_id: id, note: newNote });
+  } catch(e) { console.error('Supabase sauvegarde:', e); }
+}
+
+// ── Données GTC ───────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch('gtc_data.json?t=' + Date.now());
+    if (!r.ok) throw new Error('404');
+    const d = await r.json();
+    ALL     = d.terrains || [];
+    NEW_IDS = new Set(d.new_ids || []);
+    document.getElementById('syncTime').textContent = 'Sync : ' + (d.last_sync || '—');
+    buildSelects(); updateStats(); applyFilters();
+  } catch(e) {
+    document.getElementById('terrainList').innerHTML =
+      '<div class="no-results"><b style="color:var(--red)">Fichier gtc_data.json introuvable</b><br><br>Lance <b>python monitor.py</b> puis rafraîchis</div>';
+  }
+}
+
+function buildSelects() {
+  const munCounts = {}, regionSet = new Set(), contamCounts = {};
+  ALL.forEach(t => {
+    if (t.municipalite) {
+      munCounts[t.municipalite] = (munCounts[t.municipalite]||0)+1;
+      const parts = t.municipalite.split(',');
+      if (parts.length >= 2) regionSet.add(parts[parts.length-1].trim());
+    }
+    if (t.contaminants) {
+      t.contaminants.replace(/Sol:|Eau:/g,'').split(',').forEach(c => {
+        const cl = c.trim().split('(')[0].trim().split('*')[0].trim();
+        if (cl.length > 3 && cl.length < 60) contamCounts[cl] = (contamCounts[cl]||0)+1;
+      });
+    }
+  });
+  const fMun = document.getElementById('fMun');
+  fMun.innerHTML = '<option value="">Toutes</option>';
+  Object.entries(munCounts).sort((a,b)=>b[1]-a[1]).forEach(([m,cnt]) =>
+    fMun.innerHTML += `<option value="${esc(m)}">${esc(m)} (${cnt})</option>`);
+  const fRegion = document.getElementById('fRegion');
+  fRegion.innerHTML = '<option value="">Toutes</option>';
+  [...regionSet].sort().forEach(r =>
+    fRegion.innerHTML += `<option value="${esc(r)}">${esc(r)}</option>`);
+  const fContam = document.getElementById('fContam');
+  fContam.innerHTML = '<option value="">Tous</option>';
+  Object.entries(contamCounts).sort((a,b)=>b[1]-a[1]).slice(0,80).forEach(([c,cnt]) =>
+    fContam.innerHTML += `<option value="${esc(c)}">${esc(c)} (${cnt})</option>`);
+}
+
+function updateStats() {
+  const withC = ALL.filter(t=>t.contaminants).length;
+  const muns  = new Set(ALL.map(t=>t.municipalite).filter(Boolean));
+  document.getElementById('sTotal').textContent  = ALL.length.toLocaleString('fr-CA');
+  document.getElementById('sNew').textContent    = NEW_IDS.size;
+  document.getElementById('sContam').textContent = withC.toLocaleString('fr-CA');
+  document.getElementById('sMun').textContent    = muns.size;
+}
+
+function getFiltered() {
+  const fAdresse = document.getElementById('fAdresse').value.toLowerCase().trim();
+  const fRegion  = document.getElementById('fRegion').value.toLowerCase();
+  const fMun     = document.getElementById('fMun').value;
+  const fContam  = document.getElementById('fContam').value;
+  const fEau     = document.getElementById('fEau').checked;
+  const fSol     = document.getElementById('fSol').checked;
+  return ALL.filter(t => {
+    const hasAction = !!(CRM[t.id]?.dossier);
+    if (currentTab === 'archives' && !ARCHIVED.has(t.id)) return false;
+    if (currentTab === 'traites'  && !TRAITED.has(t.id))  return false;
+    if (currentTab === 'action'   && (!hasAction || ARCHIVED.has(t.id) || TRAITED.has(t.id))) return false;
+    if ((currentTab === 'terrains' || currentTab === 'carte') && (ARCHIVED.has(t.id) || TRAITED.has(t.id))) return false;
+    if (fAdresse && !clean(t.adresse||'').toLowerCase().includes(fAdresse)) return false;
+    if (fRegion  && !(t.municipalite||'').toLowerCase().includes(fRegion)) return false;
+    if (fMun     && t.municipalite !== fMun) return false;
+    if (fContam  && !(t.contaminants||'').includes(fContam)) return false;
+    if (fEau && !(t.contaminants||'').toLowerCase().includes('eau')) return false;
+    if (fSol && !(t.contaminants||'').toLowerCase().includes('sol')) return false;
+    if (fStatut === 'non' && !(t.statut||'').toLowerCase().includes('non')) return false;
+    if (fStatut === 'ter' && !(t.statut||'').toLowerCase().includes('termin')) return false;
+    if (fStatut === 'enc' && ((t.statut||'').toLowerCase().includes('non')||(t.statut||'').toLowerCase().includes('termin')||!t.statut)) return false;
+    return true;
+  });
+}
+
+function applyFilters() { renderList(); if (currentTab === 'carte' && MAP) renderMapMarkers(); }
+function setSortBy(val) { sortBy = val; renderList(); }
+
+function renderList() {
+  let items = getFiltered();
+  if (sortBy === 'statut') items = [...items].sort((a,b) => statutOrder(a) - statutOrder(b));
+  else if (sortBy === 'alpha') items = [...items].sort((a,b) => clean(a.adresse||'').localeCompare(clean(b.adresse||''), 'fr'));
+  const titles = { terrains:'Terrains GTC', archives:'Terrains archivés', action:'En suivi', traites:'Terrains traités' };
+  // Mettre à jour le compteur du tab "En suivi"
+  const actionN = ALL.filter(t => CRM[t.id]?.dossier && !ARCHIVED.has(t.id) && !TRAITED.has(t.id)).length;
+  const actionCountEl = document.getElementById('actionCount');
+  if (actionCountEl) actionCountEl.textContent = actionN > 0 ? actionN : '';
+  document.getElementById('listTitle').textContent = titles[currentTab];
+  document.getElementById('resultCount').textContent =
+    items.length.toLocaleString('fr-CA') + ' résultat' + (items.length > 1 ? 's' : '');
+  const el = document.getElementById('terrainList');
+  if (!items.length) {
+    el.innerHTML = '<div class="no-results">Aucun terrain ne correspond aux filtres</div>';
+    return;
+  }
+  el.innerHTML = items.slice(0, 300).map(t => {
+    const isNew    = NEW_IDS.has(t.id);
+    const isTraite = TRAITED.has(t.id);
+    const isArch   = ARCHIVED.has(t.id);
+    const crm      = CRM[t.id] || {};
+    const nom      = esc(clean(t.adresse || t.nom || t.id));
+    const mun      = esc(t.municipalite || '');
+    const contamRaw = (t.contaminants||'').substring(0,50) + ((t.contaminants||'').length > 50 ? '…' : '');
+    const contam   = esc(contamRaw);
+    const cardCls  = isTraite ? 'traite' : isArch ? 'archive' : isNew ? 'nouveau' : 'connu';
+    const crmPill  = isTraite ? '<span class="pill pill-traite">✓ Traité</span>'
+                   : isArch   ? '<span class="pill pill-archive">Archivé</span>'
+                   : isNew    ? '<span class="pill pill-new">Nouveau</span>' : '';
+    const idJs     = jsSafe(t.id);
+    const pipeline = crm.dossier ? `<span class="ttag pipeline">${esc(crm.dossier)}</span>` : '';
+    return `<div class="tcard ${cardCls} ${t.id === selectedId ? 'sel' : ''}" onclick="selectTerrain('${idJs}')">
+      <div class="tcard-top">
+        <div class="tcard-name">${nom}</div>
+        <div class="tcard-badges">${statutPill(t)}${crmPill}</div>
+      </div>
+      <div class="tcard-mun">${mun}${t.code_postal ? ' · ' + esc(t.code_postal) : ''}</div>
+      <div class="tcard-tags">
+        ${contam ? `<span class="ttag contam">${contam}</span>` : ''}
+        ${pipeline}
+      </div>
+    </div>`;
+  }).join('');
+  if (items.length > 300)
+    el.innerHTML += `<div class="no-results">+ ${(items.length-300).toLocaleString('fr-CA')} résultats — affinez la recherche</div>`;
+}
+
+// ── Sélection + rendu du détail ───────────────────────
+function selectTerrain(id) {
+  selectedId = id;
+  const t = ALL.find(x => x.id === id);
+  if (!t) return;
+  renderList();
+  renderDetail(t);
+}
+
+function renderDetail(t) {
+  const isNew    = NEW_IDS.has(t.id);
+  const isTraite = TRAITED.has(t.id);
+  const isArch   = ARCHIVED.has(t.id);
+  const crm      = CRM[t.id] || {};
+  const id       = t.id;
+  const idJs     = jsSafe(id);
+  const si       = statutInfo(t);
+  const statutCls = !t.statut ? '' : t.statut.toLowerCase().includes('termin') ? 'ok' : t.statut.toLowerCase().includes('non') ? 'nok' : 'enc';
+
+  const emailSubj = encodeURIComponent(`Biogenie — Terrain contaminé : ${clean(t.adresse||t.id)}`);
+  const emailBody = encodeURIComponent(
+    `Bonjour,\n\nNous avons identifié une inscription au Répertoire des terrains contaminés du Québec (GTC) :\n\n`+
+    `Adresse : ${clean(t.adresse)||'N/D'}\nMunicipalité : ${t.municipalite||'N/D'}\n`+
+    `Contaminants : ${t.contaminants||'N/D'}\nStatut : ${t.statut||'N/D'}\nDossier GTC : ${t.id}\n\n`+
+    `Biogenie est spécialisée dans la réhabilitation des sols et eaux contaminés.\n`+
+    `Nous serions heureux de vous accompagner.\n\nCordialement,\nÉquipe Biogenie`
+  );
+
+  const hist = (crm.historique || []).slice().reverse();
+
+  // Boutons archiver / traiter (selon état actuel)
+  const btnTraite = !isTraite
+    ? `<button class="act-btn act-green" onclick="markTraite('${idJs}')"><span class="act-icon">✓</span>Marquer traité</button>`
+    : `<button class="act-btn act-grey"  onclick="unmarkTraite('${idJs}')"><span class="act-icon">↩</span>Retirer traité</button>`;
+  const btnArch = !isArch
+    ? `<button class="act-btn act-red"  onclick="archiver('${idJs}')"><span class="act-icon">🗃</span>Archiver</button>`
+    : `<button class="act-btn act-grey" onclick="desarchiver('${idJs}')"><span class="act-icon">↩</span>Désarchiver</button>`;
+  const btnRetirerSuivi = CRM[id]?.dossier
+    ? `<button class="act-btn act-full act-grey" onclick="retirerDuSuivi('${idJs}')"><span class="act-icon">↩</span>Retirer du suivi — remettre dans Terrains</button>`
+    : '';
+
+  const html = `
+    <!-- EN-TÊTE -->
+    <div class="d-header">
+      <div class="d-header-top">
+        <div>
+          <div class="d-header-name">${esc(clean(t.adresse || t.nom || t.id))}</div>
+          <div class="d-header-sub">${esc(t.municipalite||'')}${t.code_postal ? ' · ' + esc(t.code_postal) : ''}</div>
+        </div>
+        <span class="pill ${si.cls}" style="font-size:12px;padding:4px 10px">${si.dot} ${si.label}</span>
+      </div>
+      <div class="d-header-badges">
+        ${isNew    ? '<span class="pill pill-new">● Nouveau</span>' : ''}
+        ${isTraite ? '<span class="pill pill-traite">✓ Traité</span>' : ''}
+        ${isArch   ? '<span class="pill pill-archive">Archivé</span>' : ''}
+        ${crm.dossier ? `<span class="pill" style="background:var(--purple-dim);color:var(--purple);border:1px solid var(--purple-border)">${esc(crm.dossier)}</span>` : ''}
+      </div>
+    </div>
+
+    <!-- PIPELINE -->
+    <div class="pipeline-wrap">
+      <div class="pipeline-label">Avancement du dossier — cliquez pour mettre à jour</div>
+      ${renderPipeline(id, crm.dossier || '')}
+    </div>
+
+    <!-- INFOS TERRAIN -->
+    <div class="d-section">
+      <div class="d-section-title"><span>📋</span> Informations terrain</div>
+      <div class="info-grid">
+        ${t.contaminants ? `<div class="i-field full"><div class="i-label">Contaminants</div><div class="i-val contam">${esc(t.contaminants)}</div></div>` : ''}
+        ${t.qual_sols    ? `<div class="i-field full"><div class="i-label">Qualité des sols</div><div class="i-val contam">${esc(t.qual_sols)}</div></div>` : ''}
+        <div class="i-field"><div class="i-label">Statut réhabilitation</div><div class="i-val ${statutCls}"><span class="pill ${si.cls}" style="font-size:10px">${si.dot} ${si.label}</span></div></div>
+        ${t.activite     ? `<div class="i-field"><div class="i-label">Milieu récepteur</div><div class="i-val">${esc(t.activite)}</div></div>` : ''}
+        ${t.aire_contaminee_m2 > 0 ? `<div class="i-field"><div class="i-label">Superficie zone contaminée</div><div class="i-val"><strong>${t.aire_contaminee_m2.toLocaleString('fr-CA')}&nbsp;m²</strong></div></div>` : ''}
+        ${t.nb_fiches    ? `<div class="i-field"><div class="i-label">Nb fiches</div><div class="i-val mono">${esc(t.nb_fiches)}</div></div>` : ''}
+        ${t.date_maj     ? `<div class="i-field"><div class="i-label">Dernière mise à jour</div><div class="i-val mono">${esc(t.date_maj)}</div></div>` : ''}
+        <div class="i-field full"><div class="i-label">Identifiant GTC</div><div class="i-val mono">${esc(t.id)}</div></div>
+        ${t.latitude && t.longitude ? `<div class="i-field full">
+          <a class="maps-link" href="https://maps.google.com/?q=${esc(t.latitude)},${esc(t.longitude)}" target="_blank">📍 Voir sur Google Maps →</a>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- CONTACT -->
+    <div class="d-section">
+      <div class="d-section-title"><span>👤</span> Contact propriétaire</div>
+      <div class="contact-grid">
+        <div class="c-field">
+          <div class="c-label">Nom</div>
+          <input class="c-input" id="cNom" placeholder="Prénom Nom" value="${esc(crm.contact_nom||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field">
+          <div class="c-label">Téléphone</div>
+          <input class="c-input" id="cTel" placeholder="514 000-0000" value="${esc(crm.contact_tel||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field full">
+          <div class="c-label">Courriel</div>
+          <input class="c-input" id="cEmail" placeholder="nom@entreprise.ca" value="${esc(crm.contact_email||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field full">
+          <div class="c-label">Entreprise</div>
+          <input class="c-input" id="cEntreprise" placeholder="Nom de l'entreprise" value="${esc(crm.contact_entreprise||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTE -->
+    <div class="d-section">
+      <div class="d-section-title"><span>📝</span> Note</div>
+      <textarea class="note-area" id="cNote" placeholder="Résumé du contact, prochaine étape, remarques...">${esc(crm.note||'')}</textarea>
+      <button class="save-btn" id="saveBtn" onclick="saveDossier('${idJs}')">💾 Sauvegarder le dossier</button>
+    </div>
+
+    <!-- RAPPEL DE SUIVI -->
+    <div class="d-section no-print">
+      <div class="d-section-title"><span>⏰</span> Rappel de suivi</div>
+      <div class="reminder-row">
+        <input type="date" id="cReminder" class="c-input" style="flex:1" value="${esc(crm.reminder_date||'')}">
+        <button class="reminder-btn" onclick="saveReminder('${idJs}')">Définir rappel</button>
+      </div>
+      ${crm.reminder_date
+        ? `<div class="reminder-info">📅 Rappel défini le ${crm.reminder_date} — email automatique</div>`
+        : '<div class="reminder-info">Un email te sera envoyé à la date choisie</div>'}
+    </div>
+
+    <!-- ACTIONS RAPIDES -->
+    <div class="d-section no-print">
+      <div class="d-section-title"><span>⚡</span> Actions rapides</div>
+      <div class="actions-grid">
+        <button class="act-btn" onclick="window.location='mailto:?subject=${emailSubj}&body=${emailBody}'">
+          <span class="act-icon">📧</span>Email prospection
+        </button>
+        ${t.latitude && t.longitude
+          ? `<button class="act-btn" onclick="window.open('https://maps.google.com/?q=${esc(t.latitude)},${esc(t.longitude)}','_blank')">
+               <span class="act-icon">📍</span>Google Maps
+             </button>`
+          : `<button class="act-btn" onclick="copyTerrain()">
+               <span class="act-icon">📋</span>Copier infos
+             </button>`
+        }
+        ${btnTraite}
+        ${btnArch}
+        <button class="act-btn act-full" onclick="copyTerrain()">
+          <span class="act-icon">⎘</span>Copier toutes les informations
+        </button>
+        <button class="act-btn act-full" onclick="window.print()">
+          <span class="act-icon">📄</span>Imprimer / Générer PDF
+        </button>
+        ${btnRetirerSuivi}
+      </div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    ${hist.length ? `
+    <button class="hist-toggle" onclick="toggleHist(this)">
+      <span>📅 Historique des notes (${hist.length})</span>
+      <span id="histArrow">▼</span>
+    </button>
+    <div class="hist-items" id="histItems">
+      ${hist.map(h => `
+        <div class="hist-item">
+          <div class="hist-date">${esc(h.date)}</div>
+          <div class="hist-note">${esc(h.note)}</div>
+        </div>`).join('')}
+    </div>` : ''}
+  `;
+
+  document.getElementById('detailCol').innerHTML = html;
+  window._selTerrain = t;
+}
+
+// ── Auto-save contact (on blur) ───────────────────────
+function autoSaveContact(id) {
+  if (!CRM[id]) CRM[id] = { historique: [] };
+  const nom   = document.getElementById('cNom')?.value.trim();
+  const tel   = document.getElementById('cTel')?.value.trim();
+  const email = document.getElementById('cEmail')?.value.trim();
+  const ent   = document.getElementById('cEntreprise')?.value.trim();
+  if (nom   !== undefined) CRM[id].contact_nom        = nom;
+  if (tel   !== undefined) CRM[id].contact_tel        = tel;
+  if (email !== undefined) CRM[id].contact_email      = email;
+  if (ent   !== undefined) CRM[id].contact_entreprise = ent;
+  saveLocal();
+  saveCRMToDB(id, null);
+  toast('Contact sauvegardé');
+}
+
+// ── Sauvegarder dossier complet ───────────────────────
+function saveDossier(id) {
+  if (!CRM[id]) CRM[id] = { historique: [] };
+  const note    = document.getElementById('cNote')?.value.trim() || '';
+  const oldNote = CRM[id].note || '';
+  CRM[id].contact_nom        = document.getElementById('cNom')?.value.trim()        || CRM[id].contact_nom || '';
+  CRM[id].contact_tel        = document.getElementById('cTel')?.value.trim()        || CRM[id].contact_tel || '';
+  CRM[id].contact_email      = document.getElementById('cEmail')?.value.trim()      || CRM[id].contact_email || '';
+  CRM[id].contact_entreprise = document.getElementById('cEntreprise')?.value.trim() || CRM[id].contact_entreprise || '';
+  CRM[id].note = note;
+  const isNewNote = note && note !== oldNote;
+  if (isNewNote) {
+    if (!CRM[id].historique) CRM[id].historique = [];
+    CRM[id].historique.push({ date: new Date().toLocaleDateString('fr-CA'), note });
+  }
+  saveLocal();
+  saveCRMToDB(id, isNewNote ? note : null);
+  const btn = document.getElementById('saveBtn');
+  if (btn) { btn.textContent = '✓ Sauvegardé !'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = '💾 Sauvegarder le dossier'; btn.classList.remove('saved'); }, 2000); }
+  if (isNewNote) { const t = ALL.find(x => x.id === id); if (t) renderDetail(t); }
+  renderList();
+}
+
+// ── Statuts terrain ───────────────────────────────────
+function markTraite(id) {
+  TRAITED.add(id); ARCHIVED.delete(id);
+  saveLocal(); saveCRMToDB(id, null); renderList();
+  const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
+  toast('✓ Terrain marqué comme traité');
+}
+function unmarkTraite(id) {
+  TRAITED.delete(id);
+  saveLocal(); saveCRMToDB(id, null); renderList();
+  const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
+}
+function archiver(id) {
+  ARCHIVED.add(id); TRAITED.delete(id);
+  saveLocal(); saveCRMToDB(id, null); renderList();
+  const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
+  toast('Terrain archivé');
+}
+function desarchiver(id) {
+  ARCHIVED.delete(id);
+  saveLocal(); saveCRMToDB(id, null); renderList();
+  const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
+}
+function retirerDuSuivi(id) {
+  if (!CRM[id]) CRM[id] = { historique: [] };
+  CRM[id].dossier = '';
+  saveLocal(); saveCRMToDB(id, null); renderList();
+  const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
+  toast('Terrain retiré du suivi — visible dans Terrains');
+}
+
+// ── Historique toggle ────────────────────────────────
+function toggleHist(btn) {
+  const items = document.getElementById('histItems');
+  const arrow = document.getElementById('histArrow');
+  if (!items) return;
+  const open = items.classList.toggle('open');
+  if (arrow) arrow.textContent = open ? '▲' : '▼';
+}
+
+// ── Copier infos ──────────────────────────────────────
+function copyTerrain() {
+  const t = window._selTerrain; if (!t) return;
+  const score = calcScore(t);
+  const txt = [
+    `Dossier GTC : ${t.id}`,
+    `Score priorité : ${score}/100 — ${scoreLabel(score)}`,
+    `Adresse : ${clean(t.adresse)||'—'}`,
+    `Municipalité : ${t.municipalite||'—'}`,
+    `Contaminants : ${t.contaminants||'—'}`,
+    `Qualité sols : ${t.qual_sols||'—'}`,
+    `Statut : ${t.statut||'—'}`,
+    `Coordonnées : ${t.latitude||'—'}, ${t.longitude||'—'}`,
+  ].join('\n');
+  navigator.clipboard.writeText(txt).then(() => toast('✓ Informations copiées !'));
+}
+
+// ── Export CSV ────────────────────────────────────────
+function exportCSV() {
+  let items = getFiltered();
+  if (sortBy === 'score') items = [...items].sort((a,b) => calcScore(b) - calcScore(a));
+  const cols = ['id','adresse','code_postal','municipalite','contaminants','qual_sols','statut','activite','nb_fiches','latitude','longitude','date_maj'];
+  const header = ['ID','Adresse','Code postal','Municipalité','Contaminants','Qualité sols','Statut','Milieu récepteur','Nb fiches','Latitude','Longitude','Date MAJ','Score priorité'];
+  const rows = [header, ...items.map(t => [...cols.map(c => `"${clean(t[c]||'').replace(/"/g,'""')}"`), calcScore(t)])];
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = `biogenie_gtc_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── Filtres / tabs ────────────────────────────────────
+function setStatut(s, btn) {
+  fStatut = s;
+  ['sAll','sNon','sTer','sEnc'].forEach(id => document.getElementById(id).className = 'gbtn');
+  btn.className = 'gbtn on-blue';
+}
+function switchTab(tab, btn) {
+  currentTab = tab;
+  const isCarte = tab === 'carte', isStats = tab === 'stats';
+  const listEl  = document.getElementById('listCol');
+  const mapEl   = document.getElementById('mapDiv');
+  const statEl  = document.getElementById('statsOverlay');
+  if (listEl) listEl.style.display  = (isCarte || isStats) ? 'none' : '';
+  if (mapEl)  mapEl.style.display   = isCarte ? 'block' : 'none';
+  if (statEl) statEl.style.display  = isStats ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if (isCarte)      setTimeout(initMap, 50);
+  else if (isStats) renderStats();
+  else              applyFilters();
+}
+function resetFilters() {
+  fStatut = '';
+  ['fAdresse','fRegion','fMun','fContam'].forEach(id => document.getElementById(id).value = '');
+  ['fEau','fSol'].forEach(id => document.getElementById(id).checked = false);
+  document.getElementById('sAll').className = 'gbtn on-blue';
+  ['sNon','sTer','sEnc'].forEach(id => document.getElementById(id).className = 'gbtn');
+  applyFilters();
+}
+
+// ── CARTE ─────────────────────────────────────────────
+let MAP = null, CLUSTER = null, mapFilter = 'tous';
+
+function initMap() {
+  if (!MAP) {
+    MAP = L.map('map').setView([52, -73], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(MAP);
+    CLUSTER = L.markerClusterGroup({ maxClusterRadius: 50, showCoverageOnHover: false });
+    MAP.addLayer(CLUSTER);
+
+    // Barre de filtres rapides
+    const filterBar = L.control({ position: 'topleft' });
+    filterBar.onAdd = function() {
+      const d = L.DomUtil.create('div', 'map-filter-bar');
+      d.innerHTML = `
+        <button class="mf-btn on"           onclick="setMapFilter('tous',this)">Tous</button>
+        <button class="mf-btn"              onclick="setMapFilter('nouveaux',this)">⭐ Nouveaux</button>
+        <button class="mf-btn"              onclick="setMapFilter('non_debutee',this)">🔴 Non débutée</button>
+        <button class="mf-btn"              onclick="setMapFilter('en_cours',this)">🟠 En cours</button>
+        <button class="mf-btn"              onclick="setMapFilter('termine',this)">🟢 Terminée</button>
+        <button class="mf-btn"              onclick="setMapFilter('en_suivi',this)">📂 En suivi</button>`;
+      L.DomEvent.disableClickPropagation(d);
+      return d;
+    };
+    filterBar.addTo(MAP);
+
+    // Légende
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function() {
+      const d = L.DomUtil.create('div', 'map-legend');
+      d.innerHTML = '<div class="legend-title">Statut réhabilitation</div>'
+        + '<div class="legend-row"><span class="legend-dot" style="background:#c92a2a"></span> Non débutée</div>'
+        + '<div class="legend-row"><span class="legend-dot" style="background:#e67700"></span> En cours</div>'
+        + '<div class="legend-row"><span class="legend-dot" style="background:#2f9e44"></span> Terminée</div>'
+        + '<div class="legend-row"><span class="legend-dot" style="background:#868e96"></span> Inconnu</div>';
+      return d;
+    };
+    legend.addTo(MAP);
+  } else {
+    MAP.invalidateSize();
+  }
+  renderMapMarkers();
+}
+
+function setMapFilter(filter, btn) {
+  mapFilter = filter;
+  document.querySelectorAll('.mf-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderMapMarkers();
+}
+
+function renderMapMarkers() {
+  if (!MAP || !CLUSTER) return;
+  CLUSTER.clearLayers();
+  let items = getFiltered();
+
+  // Filtres rapides spécifiques à la carte
+  if      (mapFilter === 'nouveaux')    items = items.filter(t => NEW_IDS.has(t.id));
+  else if (mapFilter === 'non_debutee') items = items.filter(t => { const r=(t.statut||'').toLowerCase(); return r.includes('non')||r.includes('initia'); });
+  else if (mapFilter === 'en_cours')    items = items.filter(t => (t.statut||'').toLowerCase().includes('cours'));
+  else if (mapFilter === 'termine')     items = items.filter(t => (t.statut||'').toLowerCase().includes('termin'));
+  else if (mapFilter === 'en_suivi')    items = items.filter(t => CRM[t.id]?.dossier);
+
+  items.forEach(t => {
+    const lat = parseFloat(t.latitude), lng = parseFloat(t.longitude);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+    const col = statutInfo(t).mapCol;
+    const m = L.circleMarker([lat, lng], { radius: 7, fillColor: col, color: '#fff', weight: 2, fillOpacity: 0.85 });
+    const id = jsSafe(t.id);
+    const addr = esc(clean(t.adresse || t.id)).substring(0, 55);
+    const mun  = esc(t.municipalite || '');
+    const cont = esc((t.contaminants || '').substring(0, 65));
+    m.bindPopup(
+      `<div class="pop-addr">${addr}</div>`
+      + `<div class="pop-mun">${mun}</div>`
+      + (cont ? `<div class="pop-contam">${cont}</div>` : '')
+      + `<button class="pop-btn" onclick="selectFromMap('${id}')">Voir le dossier →</button>`,
+      { maxWidth: 230, closeButton: false }
+    );
+    CLUSTER.addLayer(m);
+  });
+}
+
+function selectFromMap(id) {
+  selectedId = id;
+  const t = ALL.find(x => x.id === id);
+  if (!t) return;
+  if (MAP) MAP.closePopup();
+  renderDetail(t);
+}
+
+// ── STATISTIQUES ──────────────────────────────────────
+let chartInst = {};
+
+function renderStats() {
+  Object.values(chartInst).forEach(c => { try { c.destroy(); } catch(e) {} });
+  chartInst = {};
+
+  const total    = ALL.length;
+  const nouveaux = NEW_IDS.size;
+  const enSuivi  = ALL.filter(t => CRM[t.id]?.dossier && !ARCHIVED.has(t.id) && !TRAITED.has(t.id)).length;
+  const traites  = TRAITED.size;
+  const archives = ARCHIVED.size;
+
+  const sc = { 'Non débutée': 0, 'En cours': 0, 'Terminée': 0, 'Non renseigné': 0 };
+  ALL.forEach(t => {
+    const s = (t.statut || '').toLowerCase();
+    if (s.includes('cours'))                              sc['En cours']++;
+    else if (s.includes('termin'))                        sc['Terminée']++;
+    else if (s.includes('non') && !s.includes('cours'))   sc['Non débutée']++;
+    else                                                  sc['Non renseigné']++;
+  });
+
+  const mc = {};
+  ALL.forEach(t => { if (t.municipalite) { const m = t.municipalite.split(',')[0].trim(); mc[m] = (mc[m]||0)+1; } });
+  const topMun = Object.entries(mc).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+  const cc = {};
+  ALL.forEach(t => {
+    (t.contaminants||'').replace(/Sol:|Eau:/g,'').split(',').forEach(c => {
+      const cl = c.trim().split('(')[0].split('*')[0].trim();
+      if (cl.length > 2 && cl.length < 50) cc[cl] = (cc[cl]||0)+1;
+    });
+  });
+  const topCont = Object.entries(cc).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+  const pc = {};
+  STAGES.forEach(s => pc[s] = 0);
+  Object.values(CRM).forEach(c => { if (c.dossier && STAGES.includes(c.dossier)) pc[c.dossier]++; });
+  const pipeTotal = STAGES.reduce((s, k) => s + pc[k], 0);
+
+  document.getElementById('statsOverlay').innerHTML = `
+    <div class="stats-inner">
+      <div class="stats-title">📊 Statistiques — Biogenie Veille GTC</div>
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-val g">${total.toLocaleString('fr-CA')}</div><div class="kpi-label">Total terrains</div></div>
+        <div class="kpi-card"><div class="kpi-val a">${nouveaux}</div><div class="kpi-label">Nouveaux</div></div>
+        <div class="kpi-card"><div class="kpi-val p">${enSuivi}</div><div class="kpi-label">En suivi</div></div>
+        <div class="kpi-card"><div class="kpi-val b">${traites}</div><div class="kpi-label">Traités</div></div>
+        <div class="kpi-card"><div class="kpi-val r">${archives}</div><div class="kpi-label">Archivés</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card"><div class="chart-title">Répartition statut réhabilitation</div><canvas id="cStatut"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Pipeline commercial (${pipeTotal} dossier${pipeTotal>1?'s':''})</div><canvas id="cPipeline"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Top 10 municipalités</div><canvas id="cMun"></canvas></div>
+        <div class="chart-card"><div class="chart-title">Top 10 contaminants</div><canvas id="cCont"></canvas></div>
+      </div>
+    </div>`;
+
+  const font = { family: "'Inter', sans-serif", size: 11 };
+  const noLeg = { plugins: { legend: { display: false } } };
+
+  chartInst.statut = new Chart(document.getElementById('cStatut'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(sc), datasets: [{ data: Object.values(sc), backgroundColor: ['#c92a2a','#e67700','#2f9e44','#868e96'], borderWidth: 2, borderColor: '#fff' }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { font, boxWidth: 12 } } } }
+  });
+
+  chartInst.pipeline = new Chart(document.getElementById('cPipeline'), {
+    type: 'bar',
+    data: { labels: STAGES, datasets: [{ data: STAGES.map(s => pc[s]), backgroundColor: ['#74c0fc','#4dabf7','#339af0','#1c7ed6','#1971c2'], borderRadius: 4 }] },
+    options: { ...noLeg, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0, font } }, y: { ticks: { font } } } }
+  });
+
+  chartInst.mun = new Chart(document.getElementById('cMun'), {
+    type: 'bar',
+    data: { labels: topMun.map(([m]) => m.length > 22 ? m.slice(0,22)+'…' : m), datasets: [{ data: topMun.map(([,n]) => n), backgroundColor: '#2f9e44', borderRadius: 3 }] },
+    options: { ...noLeg, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0, font } }, y: { ticks: { font } } } }
+  });
+
+  chartInst.cont = new Chart(document.getElementById('cCont'), {
+    type: 'bar',
+    data: { labels: topCont.map(([c]) => c.length > 22 ? c.slice(0,22)+'…' : c), datasets: [{ data: topCont.map(([,n]) => n), backgroundColor: '#e67700', borderRadius: 3 }] },
+    options: { ...noLeg, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0, font } }, y: { ticks: { font } } } }
+  });
+}
+
+// ── RAPPEL DE SUIVI ───────────────────────────────────
+function saveReminder(id) {
+  const date = document.getElementById('cReminder')?.value || '';
+  if (!CRM[id]) CRM[id] = { historique: [] };
+  CRM[id].reminder_date = date;
+  saveLocal();
+  if (db) {
+    db.from('crm').upsert({
+      terrain_id: id, reminder_date: date || null, reminder_sent: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'terrain_id' }).catch(e => console.error('Reminder:', e));
+  }
+  toast(date ? `⏰ Rappel défini le ${date}` : 'Rappel supprimé');
+  const t = ALL.find(x => x.id === id);
+  if (t) renderDetail(t);
+}
+
+// ── Démarrage ─────────────────────────────────────────
+loadData();
+loadCRMFromDB();
+setInterval(loadData, 15 * 60 * 1000);
+</script>
+</body>
+</html>

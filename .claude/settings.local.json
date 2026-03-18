@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ed8b0cb4-fc0f-48fb-bfab-51fdcfa7594a__element_builder",
+      "mcp__ed8b0cb4-fc0f-48fb-bfab-51fdcfa7594a__element_tool",
+      "WebFetch(domain:medecine-vasculaire-epilation-laser.webflow.io)",
+      "mcp__ed8b0cb4-fc0f-48fb-bfab-51fdcfa7594a__style_tool",
+      "mcp__ed8b0cb4-fc0f-48fb-bfab-51fdcfa7594a__de_page_tool",
+      "mcp__ed8b0cb4-fc0f-48fb-bfab-51fdcfa7594a__element_snapshot_tool",
+      "WebFetch(domain:www.environnement.gouv.qc.ca)",
+      "WebSearch",
+      "WebFetch(domain:www.donneesquebec.ca)",
+      "WebFetch(domain:www.servicesgeo.enviroweb.gouv.qc.ca)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3 monitor.py --once)",
+      "Bash(/Users/antoinebegon/Desktop/AAA/.github/workflows/monitor.yml:*)",
+      "Bash(/Users/antoinebegon/Desktop/AAA/.gitignore:*)"
+    ]
+  }
+}

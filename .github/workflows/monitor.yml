@@ -1,0 +1,57 @@
+name: Biogenie — Veille GTC
+
+on:
+  schedule:
+    - cron: '0 6,12,18,0 * * *'   # 4x/jour : 0h, 6h, 12h, 18h UTC = 2h, 8h, 14h, 20h Québec
+  workflow_dispatch:               # Bouton pour lancer manuellement
+
+permissions:
+  contents: write
+
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Date du jour (pour le cache)
+        id: date
+        run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Cache GPKG 24h (evite re-telecharger 50 Mo a chaque run)
+        uses: actions/cache@v4
+        with:
+          path: /tmp/biogenie_gtc
+          key: gpkg-${{ steps.date.outputs.today }}
+          restore-keys: gpkg-
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+      - name: Lancer la veille GTC
+        env:
+          SMTP_USER:    ${{ secrets.SMTP_USER }}
+          SMTP_PASS:    ${{ secrets.SMTP_PASS }}
+          ALERT_EMAIL:  ${{ secrets.ALERT_EMAIL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python monitor.py --once
+
+      - name: Sauvegarder les donnees dans le depot
+        run: |
+          git config user.name  "Biogenie Bot"
+          git config user.email "bot@biogenie.ca"
+          git add gtc_data.json gtc_snapshot.json gtc_status_cache.json
+          git diff --staged --quiet || git commit -m "Mise a jour GTC $(date +'%Y-%m-%d %H:%M UTC')"
+          git push
