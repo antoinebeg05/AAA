@@ -1,14 +1,23 @@
-# Environnement Python
+# ── SÉCURITÉ — Ne jamais envoyer sur GitHub ────────────
 .env
+*.env
+
+# Environnement Python (lourd, inutile dans le dépôt)
 __pycache__/
 *.pyc
 venv/
 .venv/
 
-# Logs et alertes (pas necessaire dans le depot)
+# Logs et alertes (générés automatiquement)
 *.log
 alerte_*.json
 gtc_changes.json
 
-# Fichiers temporaires
+# Fichiers Railway (ancienne méthode de déploiement)
+nixpacks.toml
+railway.json
+server.py
+
+# Fichiers systèmes / éditeurs
 .DS_Store
+.claude/
