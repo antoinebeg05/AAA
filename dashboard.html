@@ -258,6 +258,19 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .reminder-btn:hover{background:#1864ab}
 .reminder-info{font-size:10px;color:var(--text3);margin-top:5px}
 
+/* ─── LOGIN OVERLAY ─────────────────────────────────── */
+#loginOverlay{position:fixed;inset:0;background:linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);z-index:9999;display:none;align-items:center;justify-content:center}
+.login-card{background:#fff;border-radius:16px;padding:40px 36px;width:360px;box-shadow:0 25px 60px rgba(0,0,0,.5);text-align:center}
+.login-logo{font-size:24px;font-weight:800;color:var(--green);letter-spacing:-.5px;margin-bottom:3px}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:28px;letter-spacing:.02em}
+.login-label{display:block;text-align:left;font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
+.login-input{width:100%;padding:10px 14px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:14px;outline:none;transition:border .15s;margin-bottom:14px}
+.login-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim)}
+.login-btn{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+.login-btn:hover{background:#1864ab}
+.login-err{color:var(--red);font-size:11px;margin-top:10px;display:none;font-weight:500}
+.login-footer{font-size:10px;color:var(--text3);margin-top:20px}
+
 /* ─── IMPRESSION / PDF ───────────────────────────────── */
 @media print{
   header,.filters-col,#listCol,#mapDiv,#statsOverlay,.toast,
@@ -273,6 +286,20 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 </style>
 </head>
 <body>
+
+<!-- ─── LOGIN OVERLAY ──────────────────────────────── -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">🌿 Biogenie</div>
+    <div class="login-sub">Veille GTC — Accès équipe</div>
+    <label class="login-label" for="loginPass">Mot de passe</label>
+    <input class="login-input" id="loginPass" type="password" placeholder="••••••••"
+           onkeydown="if(event.key==='Enter')verifierMotDePasse()">
+    <button class="login-btn" onclick="verifierMotDePasse()">Se connecter →</button>
+    <div class="login-err" id="loginErr">❌ Mot de passe incorrect</div>
+    <div class="login-footer">Biogenie © 2026 — Usage interne seulement</div>
+  </div>
+</div>
 
 <header>
   <div class="logo">
@@ -378,6 +405,57 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 <div class="toast" id="toast"></div>
 
 <script>
+// ─────────────────────────────────────────────────────
+// AUTHENTIFICATION — Accès équipe Biogenie
+// ─────────────────────────────────────────────────────
+// ÉTAPE DE CONFIGURATION (une seule fois) :
+//   1. Ouvre le dashboard dans ton navigateur
+//   2. Ouvre la console (F12 → onglet Console)
+//   3. Tape :  genererHash('TonMotDePasse')
+//   4. Copie le résultat et colle-le dans PASS_HASH ci-dessous
+//   5. Commit + Push dans GitHub Desktop
+// ─────────────────────────────────────────────────────
+const PASS_HASH    = '0e94fc45ddaae5358554d1efdee4450f511b361b79fcd867d6460aef403977cf';
+const SESSION_JOURS = 7; // Durée de session (jours)
+
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Fonction à appeler depuis la console pour générer ton hash
+window.genererHash = async function(mdp) {
+  const h = await _sha256(mdp);
+  console.log('%c✅ Hash SHA-256 de ton mot de passe :', 'color:green;font-weight:bold;font-size:14px');
+  console.log('%c' + h, 'color:#1971c2;font-size:13px;font-weight:bold');
+  console.log('%c→ Copie cette ligne et colle-la dans dashboard.html :', 'color:#666');
+  console.log(`%cconst PASS_HASH = '${h}';`, 'color:#c92a2a;font-size:12px');
+  return h;
+};
+
+window.verifierMotDePasse = async function() {
+  const input = document.getElementById('loginPass').value.trim();
+  if (!input) return;
+  const h = await _sha256(input);
+  if (h === PASS_HASH) {
+    localStorage.setItem('bio_session_exp', (Date.now() + SESSION_JOURS*24*3600*1000).toString());
+    document.getElementById('loginOverlay').style.display = 'none';
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+};
+
+// Vérification automatique au chargement
+(function checkSession() {
+  if (!PASS_HASH) return; // Pas encore configuré → accès libre
+  const exp = localStorage.getItem('bio_session_exp');
+  const valide = exp && Date.now() < parseInt(exp);
+  if (!valide) document.getElementById('loginOverlay').style.display = 'flex';
+})();
+// ─────────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────────
 // CONFIG SUPABASE — CRM partagé entre collègues
 // 1. Crée un compte gratuit sur supabase.com

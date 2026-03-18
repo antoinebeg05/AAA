@@ -1,104 +1,128 @@
 # Biogenie — Moniteur GTC
 
-Surveille en temps réel le Répertoire des terrains contaminés du Québec (GTC).
-Dès qu'un nouveau terrain apparaît, Biogenie envoie un **email** automatique.
+Surveille en temps réel le Répertoire des terrains contaminés du Québec (GTC - MELCCFP).
+Dès qu'un nouveau terrain apparaît, Biogenie reçoit une **alerte email automatique**.
 
 ---
 
-## Déploiement gratuit (GitHub Actions + GitHub Pages)
+## Dashboard en ligne
 
-C'est l'option recommandée : **zéro serveur, zéro coût**, le dashboard est accessible en ligne pour toute l'équipe.
-
-### 1. Créer un repo GitHub
-
-```bash
-git init
-git add .
-git commit -m "init"
-git remote add origin https://github.com/TON_USER/biogenie.git
-git push -u origin main
+```
+https://antoinebeg05.github.io/AAA/dashboard.html
 ```
 
-### 2. Ajouter les secrets GitHub
+Accessible par toute l'équipe, sans rien installer. Fonctionne sur Mac, Windows et téléphone.
 
-Dans le repo → **Settings > Secrets and variables > Actions** → New repository secret :
+---
+
+## Ce que fait ce logiciel
+
+- 📡 **Surveille** le fichier GTC du gouvernement québécois 4x par jour
+- 📧 **Envoie un email** automatique dès qu'un nouveau terrain est détecté
+- 🗺️ **Carte interactive** avec code couleur par statut de réhabilitation
+- 📋 **CRM intégré** : notes, pipeline, rappels, historique par terrain
+- 📊 **Statistiques** : vue d'ensemble des terrains suivis
+- 🔒 **Accès protégé** par mot de passe pour l'équipe
+
+---
+
+## Code couleur des terrains
+
+| Couleur | Statut |
+|---|---|
+| 🔴 Rouge | Réhabilitation non débutée |
+| 🟠 Orange | Réhabilitation en cours |
+| 🟢 Vert | Réhabilitation terminée |
+| ⚫ Gris | Statut inconnu |
+
+---
+
+## Fichiers du projet
+
+| Fichier | Rôle |
+|---|---|
+| `dashboard.html` | Interface principale (carte, liste, CRM) |
+| `monitor.py` | Script de surveillance GTC |
+| `requirements.txt` | Dépendances Python |
+| `supabase_setup.sql` | Configuration base de données (une seule fois) |
+| `.github/workflows/monitor.yml` | Automatisation GitHub Actions |
+| `env.example` | Modèle de configuration (sans mots de passe) |
+
+---
+
+## Configuration initiale
+
+### 1. Fichier `.env` (ne jamais mettre sur GitHub)
+```bash
+cp env.example .env
+# Remplir avec tes vraies valeurs
+```
+
+```
+SMTP_USER=votre.email@gmail.com
+SMTP_PASS=votre_app_password_gmail
+ALERT_EMAIL=votre.email@gmail.com
+```
+
+> App Password Gmail → myaccount.google.com/apppasswords
+
+### 2. Dépendances Python
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. Test local
+```bash
+python3 monitor.py --once
+```
+
+---
+
+## Secrets GitHub Actions
+
+**Settings → Secrets and variables → Actions → New repository secret**
 
 | Nom | Valeur |
-|-----|--------|
-| `SMTP_USER` | ton adresse Gmail |
-| `SMTP_PASS` | ton App Password Gmail |
-| `ALERT_EMAIL` | email qui reçoit les alertes |
-
-### 3. Activer GitHub Pages
-
-Dans le repo → **Settings > Pages** → Source : `Deploy from a branch` → branche `main`, dossier `/ (root)`.
-
-Le dashboard sera accessible sur : `https://TON_USER.github.io/biogenie/dashboard.html`
-
-### 4. C'est tout !
-
-Le moniteur tourne automatiquement **toutes les heures** via GitHub Actions.
-Tu peux aussi le déclencher manuellement depuis l'onglet **Actions** du repo.
+|---|---|
+| `SMTP_USER` | Adresse Gmail |
+| `SMTP_PASS` | App Password Gmail |
+| `ALERT_EMAIL` | Email destinataire des alertes |
 
 ---
 
-## Utilisation locale
+## Activer le mot de passe du dashboard
 
-### Pré-requis
-- Python 3.10+
-- Un compte Gmail avec App Password activé → myaccount.google.com/apppasswords
-
-### Installation
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# Ouvre .env et remplis tes identifiants Gmail
-```
-
-### Lancer le moniteur en continu (vérifie toutes les 15 min)
-
-```bash
-python monitor.py
-```
-
-### Lancer une seule vérification
-
-```bash
-python monitor.py --once
-```
-
-### Lancer avec le dashboard web (port 8080)
-
-```bash
-python server.py
-# Dashboard : http://localhost:8080/dashboard.html
-```
+1. Ouvrir le dashboard dans le navigateur
+2. Ouvrir la console (F12 → onglet Console)
+3. Taper : `genererHash('VotreMotDePasse')`
+4. Copier le hash affiché
+5. Le coller dans `dashboard.html` à la ligne `const PASS_HASH = '...'`
+6. Commit + Push dans GitHub Desktop
 
 ---
 
-## Ce que tu reçois quand un terrain est détecté
+## Moniteur automatique
 
-**Email (récapitulatif HTML) :**
-Tableau avec tous les nouveaux terrains : adresse, municipalité, contaminants, statut, ID GTC.
+Tourne via GitHub Actions **4x par jour** :
 
----
+| Heure UTC | Heure Québec |
+|---|---|
+| 0h | 20h (veille) |
+| 6h | 2h |
+| 12h | 8h |
+| 18h | 14h |
 
-## Sources de données
-
-| Source | Fréquence màj | Champs disponibles |
-|--------|--------------|-------------------|
-| GTC MELCCFP (GPKG) | Périodique | Nom, adresse, contaminants, statut, superficie, coordonnées GPS |
-
-**Fichier source :** Azure Blob Storage MELCCFP — `RepertoireTerrainsContamines.gpkg.zip`
-**Licence :** Creative Commons 4.0 Attribution (CC-BY) — Québec
+Déclenchement manuel possible : onglet **Actions** → **Biogenie — Veille GTC** → **Run workflow**
 
 ---
 
-## Évolutions possibles
+## Source des données
 
-- [ ] Filtrer par région (Montréal, Laval, Rive-Sud...)
-- [ ] Filtrer par type de contaminant (hydrocarbures, métaux lourds...)
-- [ ] Intégration webhook Slack
-- [ ] Alertes SMS via Twilio
-- [ ] Scraping registre foncier (nouvelles inscriptions)
+**Répertoire des terrains contaminés (GTC)** — MELCCFP, Gouvernement du Québec
+Licence CC-BY 4.0 — https://www.donneesquebec.ca
+
+---
+
+*Biogenie — Consultation environnementale, Québec*
