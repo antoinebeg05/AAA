@@ -221,7 +221,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;box-shadow:var(--shadow-md)}
 
 /* ─── CARTE ──────────────────────────────────────────── */
-#mapDiv{grid-column:2;grid-row:1;display:none;overflow:hidden}
+#mapDiv{grid-column:2;grid-row:1;display:none;overflow:hidden;position:relative}
+#map{width:100%;height:100%;min-height:400px}
 .leaflet-popup-content-wrapper{font-family:'Inter',-apple-system,sans-serif!important;border-radius:8px!important;box-shadow:var(--shadow-md)!important}
 .leaflet-popup-content{margin:12px 14px!important;min-width:160px}
 .pop-addr{font-weight:700;color:var(--text);margin-bottom:3px;font-size:12px}
@@ -316,20 +317,45 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
   }
   .mobile-back:active{background:var(--blue-dim)}
 
-  /* Détail intérieur */
-  .d-header{padding:16px;border-radius:0}
+  /* Détail intérieur — désactiver sticky sur iOS (cause bugs scroll) */
+  .d-header{padding:14px 16px;border-radius:0;position:static}
   .d-header-name{font-size:15px}
-  .d-section{padding:14px 16px}
-  .d-section-title{font-size:11px}
-  .act-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .act-btn{font-size:11px;padding:10px 8px}
-  .act-full{grid-column:1/-1}
+  .d-section{padding:12px 16px}
+  .d-section-title{font-size:10px;margin-bottom:8px}
 
-  /* Pipeline */
-  .pipeline-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  /* Pipeline — scroll horizontal */
+  .pipeline-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+  .pipeline{min-width:500px} /* force scroll horizontal si besoin */
+
+  /* Actions — colonne unique sur mobile pour plus de lisibilité */
+  .actions-grid{grid-template-columns:1fr;gap:6px}
+  .act-btn{padding:13px 12px;font-size:13px;flex-direction:row;justify-content:flex-start;gap:10px}
+  .act-btn.act-full{grid-column:1}
+  .act-icon{font-size:16px}
+
+  /* Contacts */
+  .contact-grid{grid-template-columns:1fr}
+  .c-field.full{grid-column:1}
+  .c-input{font-size:16px;padding:10px 12px} /* 16px évite zoom auto iPhone */
+
+  /* Note */
+  .note-area{font-size:15px;min-height:80px}
+
+  /* Historique — toujours visible sur mobile */
+  .hist-toggle{font-size:13px;padding:12px 16px}
+  .hist-items{display:block!important}
+  .hist-item{padding:10px 16px}
+
+  /* Cacher bouton imprimer sur mobile (inutile) */
+  .mobile-hide{display:none!important}
 
   /* Carte */
-  #mapDiv{top:48px}
+  #mapDiv{
+    position:fixed;top:48px;left:0;right:0;bottom:0;
+    width:100%;height:calc(100vh - 48px);
+    display:none;
+  }
+  #map{width:100%;height:100%}
 
   /* Stats */
   #statsOverlay{top:48px;padding:14px}
@@ -972,7 +998,7 @@ function renderDetail(t) {
         <button class="act-btn act-full" onclick="copyTerrain()">
           <span class="act-icon">⎘</span>Copier toutes les informations
         </button>
-        <button class="act-btn act-full" onclick="window.print()">
+        <button class="act-btn act-full mobile-hide" onclick="window.print()">
           <span class="act-icon">📄</span>Imprimer / Générer PDF
         </button>
         ${btnRetirerSuivi}
@@ -985,7 +1011,7 @@ function renderDetail(t) {
       <span>📅 Historique des notes (${hist.length})</span>
       <span id="histArrow">▼</span>
     </button>
-    <div class="hist-items" id="histItems">
+    <div class="hist-items" id="histItems" style="${window.innerWidth <= 768 ? 'display:block' : 'display:none'}">
       ${hist.map(h => `
         <div class="hist-item">
           <div class="hist-date">${esc(h.date)}</div>
@@ -1148,7 +1174,7 @@ let MAP = null, CLUSTER = null, mapFilter = 'tous';
 
 function initMap() {
   if (!MAP) {
-    MAP = L.map('map').setView([52, -73], 5);
+    MAP = L.map('map', { tap: true, tapTolerance: 15 }).setView([52, -73], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
       maxZoom: 18
@@ -1187,6 +1213,8 @@ function initMap() {
   } else {
     MAP.invalidateSize();
   }
+  // Force le recalcul de taille (important sur iPhone)
+  setTimeout(() => { if (MAP) MAP.invalidateSize(); }, 200);
   renderMapMarkers();
 }
 
