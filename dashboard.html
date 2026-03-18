@@ -307,13 +307,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
   }
   .detail-col.mobile-open{transform:translateX(0)}
 
-  /* Bouton retour */
+  /* Bouton retour — pas sticky sur iOS (bug scroll) */
   .mobile-back{
     display:flex;align-items:center;gap:8px;
-    padding:13px 16px;background:var(--bg2);
+    padding:14px 16px;background:var(--bg2);
     border-bottom:1px solid var(--border);
     font-size:14px;font-weight:600;color:var(--blue);
-    cursor:pointer;flex-shrink:0;position:sticky;top:0;z-index:10;
+    cursor:pointer;
   }
   .mobile-back:active{background:var(--blue-dim)}
 
@@ -341,10 +341,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
   /* Note */
   .note-area{font-size:15px;min-height:80px}
 
-  /* Historique — toujours visible sur mobile */
+  /* Historique — toujours ouvert sur mobile */
   .hist-toggle{font-size:13px;padding:12px 16px}
-  .hist-items{display:block!important}
+  .hist-items,.hist-items.open{display:block!important}
   .hist-item{padding:10px 16px}
+  #histArrow{display:none}
 
   /* Cacher bouton imprimer sur mobile (inutile) */
   .mobile-hide{display:none!important}
@@ -1011,7 +1012,7 @@ function renderDetail(t) {
       <span>📅 Historique des notes (${hist.length})</span>
       <span id="histArrow">▼</span>
     </button>
-    <div class="hist-items" id="histItems" style="${window.innerWidth <= 768 ? 'display:block' : 'display:none'}">
+    <div class="hist-items${window.innerWidth <= 768 ? ' open' : ''}" id="histItems">
       ${hist.map(h => `
         <div class="hist-item">
           <div class="hist-date">${esc(h.date)}</div>
