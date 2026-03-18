@@ -271,6 +271,81 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .login-err{color:var(--red);font-size:11px;margin-top:10px;display:none;font-weight:500}
 .login-footer{font-size:10px;color:var(--text3);margin-top:20px}
 
+/* ─── MOBILE ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body{overflow:auto;-webkit-text-size-adjust:100%}
+  header{padding:0 10px;height:48px;gap:6px}
+  .logo-sub,.sync-time,.db-badge,.live-badge{display:none}
+  .logo-name{font-size:13px}
+  .logo-mark{width:26px;height:26px;font-size:12px}
+  .nav-tabs{gap:1px;background:var(--bg2);border-radius:7px;padding:2px}
+  .tab{padding:5px 9px;font-size:10px;border-radius:5px}
+  .tab-count{display:none}
+  .hright{gap:4px}
+
+  /* Layout principal */
+  .app{display:block;height:calc(100vh - 48px);overflow:hidden;position:relative}
+  .filters-col{display:none}
+  .list-col{width:100%;height:calc(100vh - 48px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+  /* Cartes de la liste */
+  .card{padding:12px 14px;border-radius:0;border-left:none;border-right:none}
+  .card-title{font-size:13px}
+  .card-sub{font-size:11px}
+  .card-badges{gap:4px;flex-wrap:wrap}
+
+  /* Panneau détail = glisse depuis la droite */
+  .detail-col{
+    position:fixed;top:48px;left:0;right:0;bottom:0;
+    z-index:500;width:100%;
+    transform:translateX(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    border-left:none;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .detail-col.mobile-open{transform:translateX(0)}
+
+  /* Bouton retour */
+  .mobile-back{
+    display:flex;align-items:center;gap:8px;
+    padding:13px 16px;background:var(--bg2);
+    border-bottom:1px solid var(--border);
+    font-size:14px;font-weight:600;color:var(--blue);
+    cursor:pointer;flex-shrink:0;position:sticky;top:0;z-index:10;
+  }
+  .mobile-back:active{background:var(--blue-dim)}
+
+  /* Détail intérieur */
+  .d-header{padding:16px;border-radius:0}
+  .d-header-name{font-size:15px}
+  .d-section{padding:14px 16px}
+  .d-section-title{font-size:11px}
+  .act-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .act-btn{font-size:11px;padding:10px 8px}
+  .act-full{grid-column:1/-1}
+
+  /* Pipeline */
+  .pipeline-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+
+  /* Carte */
+  #mapDiv{top:48px}
+
+  /* Stats */
+  #statsOverlay{top:48px;padding:14px}
+  .kpi-row{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi-val{font-size:20px}
+  .chart-grid{grid-template-columns:1fr}
+
+  /* Login */
+  .login-card{width:calc(100vw - 32px);padding:28px 20px;border-radius:12px}
+  .login-logo{font-size:20px}
+  .login-input{font-size:16px} /* Évite le zoom auto sur iPhone */
+}
+@media (min-width: 769px){
+  .mobile-back{display:none!important}
+}
+
 /* ─── IMPRESSION / PDF ───────────────────────────────── */
 @media print{
   header,.filters-col,#listCol,#mapDiv,#statsOverlay,.toast,
@@ -787,7 +862,13 @@ function renderDetail(t) {
     ? `<button class="act-btn act-full act-grey" onclick="retirerDuSuivi('${idJs}')"><span class="act-icon">↩</span>Retirer du suivi — remettre dans Terrains</button>`
     : '';
 
+  // Ouvrir le panneau détail sur mobile
+  const detailCol = document.getElementById('detailCol');
+  if (window.innerWidth <= 768 && detailCol) detailCol.classList.add('mobile-open');
+
   const html = `
+    <!-- BOUTON RETOUR MOBILE -->
+    <div class="mobile-back" onclick="fermerDetailMobile()">← Retour à la liste</div>
     <!-- EN-TÊTE -->
     <div class="d-header">
       <div class="d-header-top">
@@ -979,6 +1060,11 @@ function desarchiver(id) {
   saveLocal(); saveCRMToDB(id, null); renderList();
   const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
 }
+function fermerDetailMobile() {
+  const detailCol = document.getElementById('detailCol');
+  if (detailCol) detailCol.classList.remove('mobile-open');
+}
+
 function retirerDuSuivi(id) {
   if (!CRM[id]) CRM[id] = { historique: [] };
   CRM[id].dossier = '';
