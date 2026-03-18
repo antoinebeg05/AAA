@@ -1023,6 +1023,13 @@ function renderDetail(t) {
 
   document.getElementById('detailCol').innerHTML = html;
   window._selTerrain = t;
+
+  // Sur mobile : forcer l'historique ouvert + revenir en haut
+  if (window.innerWidth <= 768) {
+    const hi = document.getElementById('histItems');
+    if (hi) { hi.style.display = 'block'; }
+    document.getElementById('detailCol').scrollTop = 0;
+  }
 }
 
 // ── Auto-save contact (on blur) ───────────────────────
