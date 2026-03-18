@@ -369,6 +369,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
   .hist-note{font-size:13px}
   #histArrow{display:none}
 
+  /* Filtres rapides mobile */
+  .mobile-filter-row{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--border);scrollbar-width:none;flex-shrink:0}
+  .mobile-filter-row::-webkit-scrollbar{display:none}
+  .mf-pill{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border2);background:#fff;color:var(--text2);cursor:pointer;white-space:nowrap}
+  .mf-pill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
   /* Masqué sur mobile */
   .mobile-hide{display:none!important}
 
@@ -390,6 +396,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 }
 @media (min-width: 769px){
   .mobile-back{display:none!important}
+  .mobile-filter-row{display:none!important}
 }
 
 /* ─── IMPRESSION / PDF ───────────────────────────────── */
@@ -506,7 +513,45 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
         <button class="icon-btn" onclick="exportCSV()">↓ CSV</button>
       </div>
     </div>
+    <!-- Filtres rapides mobile (cachés sur desktop) -->
+    <div class="mobile-filter-row" id="mobileFilterRow">
+      <button class="mf-pill on" id="mpAll" onclick="mobileQuickFilter('all',this)">Tous</button>
+      <button class="mf-pill" id="mpNew" onclick="mobileQuickFilter('new',this)">⭐ Nouveaux</button>
+      <button class="mf-pill" id="mpNon" onclick="mobileQuickFilter('non',this)">🔴 Non débutée</button>
+      <button class="mf-pill" id="mpEnc" onclick="mobileQuickFilter('enc',this)">🟠 En cours</button>
+      <button class="mf-pill" id="mpTer" onclick="mobileQuickFilter('ter',this)">🟢 Terminée</button>
+      <button class="mf-pill" onclick="openMobileFilters()">⚙ Filtres+</button>
+    </div>
     <div class="terrain-list" id="terrainList"></div>
+  </div>
+
+  <!-- Tiroir filtres avancés mobile -->
+  <div id="mobileFilterDrawer" style="display:none;position:fixed;inset:0;z-index:1500">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5)" onclick="closeMobileFilters()"></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px 40px">
+      <div style="width:40px;height:4px;background:#dee2e6;border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:20px;text-align:center">🔍 Filtres avancés</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Adresse</label>
+        <input id="mfAdresse" placeholder="Ex: 120 rue des Pins..." style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:8px;font-size:15px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Région</label>
+        <select id="mfRegion" style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;box-sizing:border-box"><option value="">Toutes</option></select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Municipalité</label>
+        <select id="mfMun" style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;box-sizing:border-box"><option value="">Toutes</option></select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Contaminants</label>
+        <select id="mfContam" style="width:100%;padding:11px 14px;border:1.5px solid var(--border2);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;box-sizing:border-box"><option value="">Tous</option></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px">
+        <button onclick="applyMobileFilters()" style="padding:14px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Appliquer</button>
+        <button onclick="resetMobileFilters()" style="padding:14px;background:var(--bg2);color:var(--text2);border:1.5px solid var(--border2);border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Réinitialiser</button>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ CARTE ═══ -->
@@ -679,7 +724,7 @@ function setPipelineStage(id, stage) {
 
 // ── État global ───────────────────────────────────────
 let ALL = [], NEW_IDS = new Set(), selectedId = null;
-let fStatut = '', currentTab = 'terrains', sortBy = 'statut';
+let fStatut = '', currentTab = 'terrains', sortBy = 'statut', fNouveau = false;
 let CRM = {};
 let ARCHIVED = new Set(), TRAITED = new Set();
 
@@ -809,6 +854,7 @@ function getFiltered() {
     if (fContam  && !(t.contaminants||'').includes(fContam)) return false;
     if (fEau && !(t.contaminants||'').toLowerCase().includes('eau')) return false;
     if (fSol && !(t.contaminants||'').toLowerCase().includes('sol')) return false;
+    if (fNouveau && !NEW_IDS.has(t.id)) return false;
     if (fStatut === 'non' && !(t.statut||'').toLowerCase().includes('non')) return false;
     if (fStatut === 'ter' && !(t.statut||'').toLowerCase().includes('termin')) return false;
     if (fStatut === 'enc' && ((t.statut||'').toLowerCase().includes('non')||(t.statut||'').toLowerCase().includes('termin')||!t.statut)) return false;
@@ -1026,18 +1072,17 @@ function renderDetail(t) {
     </div>
 
     <!-- HISTORIQUE -->
-    ${hist.length ? `
     <button class="hist-toggle" onclick="toggleHist(this)">
       <span>📅 Historique des notes (${hist.length})</span>
       <span id="histArrow">▼</span>
     </button>
     <div class="hist-items${window.innerWidth <= 768 ? ' open' : ''}" id="histItems">
-      ${hist.map(h => `
+      ${hist.length ? hist.map(h => `
         <div class="hist-item">
           <div class="hist-date">${esc(h.date)}</div>
           <div class="hist-note">${esc(h.note)}</div>
-        </div>`).join('')}
-    </div>` : ''}
+        </div>`).join('') : '<div class="hist-item" style="color:var(--text3);font-style:italic;font-size:12px;padding:8px 0">Aucune note pour l\'instant — ajoute une note ci-dessus ↑</div>'}
+    </div>
   `;
 
   document.getElementById('detailCol').innerHTML = html;
@@ -1188,12 +1233,62 @@ function switchTab(tab, btn) {
   else              applyFilters();
 }
 function resetFilters() {
-  fStatut = '';
+  fStatut = ''; fNouveau = false;
   ['fAdresse','fRegion','fMun','fContam'].forEach(id => document.getElementById(id).value = '');
   ['fEau','fSol'].forEach(id => document.getElementById(id).checked = false);
   document.getElementById('sAll').className = 'gbtn on-blue';
   ['sNon','sTer','sEnc'].forEach(id => document.getElementById(id).className = 'gbtn');
+  // Reset mobile pills
+  document.querySelectorAll('.mf-pill').forEach(b => b.classList.remove('on'));
+  const mpAll = document.getElementById('mpAll');
+  if (mpAll) mpAll.classList.add('on');
   applyFilters();
+}
+
+// ── FILTRES RAPIDES MOBILE ────────────────────────────
+function mobileQuickFilter(val, btn) {
+  document.querySelectorAll('.mf-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  fNouveau = (val === 'new');
+  fStatut = (val === 'all' || val === 'new') ? '' : val;
+  renderList();
+}
+
+function openMobileFilters() {
+  const dr = document.getElementById('mobileFilterDrawer');
+  if (!dr) return;
+  // Sync options from desktop selects
+  ['Region','Mun','Contam'].forEach(k => {
+    const src = document.getElementById('f' + k);
+    const dst = document.getElementById('mf' + k);
+    if (src && dst) { dst.innerHTML = src.innerHTML; dst.value = src.value; }
+  });
+  const mfAdr = document.getElementById('mfAdresse');
+  const fAdr  = document.getElementById('fAdresse');
+  if (mfAdr && fAdr) mfAdr.value = fAdr.value;
+  dr.style.display = 'block';
+}
+
+function closeMobileFilters() {
+  const dr = document.getElementById('mobileFilterDrawer');
+  if (dr) dr.style.display = 'none';
+}
+
+function applyMobileFilters() {
+  [['mfAdresse','fAdresse'],['mfRegion','fRegion'],['mfMun','fMun'],['mfContam','fContam']].forEach(([m,d]) => {
+    const me = document.getElementById(m), de = document.getElementById(d);
+    if (me && de) de.value = me.value;
+  });
+  applyFilters();
+  closeMobileFilters();
+}
+
+function resetMobileFilters() {
+  ['mfAdresse','mfRegion','mfMun','mfContam'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  resetFilters();
+  closeMobileFilters();
 }
 
 // ── CARTE ─────────────────────────────────────────────
