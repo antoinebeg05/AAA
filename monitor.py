@@ -58,19 +58,23 @@ def build_terrain(uid, d_row, p_row):
         contaminants = contam_sol or contam_eau
 
     return {
-        "id":           uid,
-        "nom":          v(p_row, "ADR_CIV_LIEU") or f"Terrain {uid}",
-        "adresse":      v(p_row, "ADR_CIV_LIEU", "AUTR_ADR_AFF"),
-        "code_postal":  v(p_row, "CODE_POST_LIEU"),
-        "municipalite": v(p_row, "LST_MRC_REG_ADM"),
-        "contaminants": contaminants,
-        "qual_sols":    v(d_row, "QUAL_SOLS", "QUAL_SOLS_AV"),
-        "statut":       v(d_row, "ETAT_REHAB"),
-        "activite":     v(p_row, "DESC_MILIEU_RECEPT"),
-        "nb_fiches":    v(p_row, "NB_FICHES"),
-        "latitude":       v(p_row, "LATITUDE"),
-        "longitude":      v(p_row, "LONGITUDE"),
-        "date_maj":       v(d_row, "DATE_CRE_MAJ"),
+        "id":              uid,
+        "nom":             v(p_row, "ADR_CIV_LIEU") or f"Terrain {uid}",
+        "adresse":         v(p_row, "ADR_CIV_LIEU", "AUTR_ADR_AFF"),
+        "code_postal":     v(p_row, "CODE_POST_LIEU"),
+        "municipalite":    v(p_row, "LST_MRC_REG_ADM"),
+        "contaminants":    contaminants,
+        "contam_sol":      contam_sol,            # Contaminants sol (détail brut)
+        "contam_eau":      contam_eau,            # Contaminants eau (détail brut)
+        "qual_sols":       v(d_row, "QUAL_SOLS", "QUAL_SOLS_AV"),
+        "qual_sols_avant": v(d_row, "QUAL_SOLS_AV"),   # Qualité sols AVANT réhabilitation
+        "no_dossier":      v(d_row, "NO_SEQ_DOSSIER"), # N° dossier officiel MELCCFP
+        "statut":          v(d_row, "ETAT_REHAB"),
+        "activite":        v(p_row, "DESC_MILIEU_RECEPT"),
+        "nb_fiches":       v(p_row, "NB_FICHES"),
+        "latitude":        v(p_row, "LATITUDE"),
+        "longitude":       v(p_row, "LONGITUDE"),
+        "date_maj":        v(d_row, "DATE_CRE_MAJ"),
         # Champ enrichi depuis la couche surface du GPKG
         "aire_contaminee_m2": 0,
     }

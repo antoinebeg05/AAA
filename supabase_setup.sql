@@ -55,3 +55,13 @@ create policy "Public" on gtc_changes
 -- Ajouter les colonnes si tu as déjà la table crm existante (ignorer les erreurs si déjà présentes)
 alter table crm add column if not exists reminder_date date;
 alter table crm add column if not exists reminder_sent boolean default false;
+
+-- ── NOUVELLES COLONNES — Propriétaire + Plan réhabilitation ──
+alter table crm add column if not exists prop_nom         text default '';
+alter table crm add column if not exists prop_tel         text default '';
+alter table crm add column if not exists prop_email       text default '';
+alter table crm add column if not exists prop_source      text default '';
+alter table crm add column if not exists plan_type        text default '';
+alter table crm add column if not exists plan_date        date;
+alter table crm add column if not exists plan_responsable text default '';
+alter table crm add column if not exists plan_notes       text default '';

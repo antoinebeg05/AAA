@@ -775,6 +775,12 @@ async function saveCRMToDB(id, newNote) {
       dossier_status: c.dossier || '', note: c.note || '',
       is_archived: ARCHIVED.has(id), is_treated: TRAITED.has(id),
       reminder_date: c.reminder_date || null,
+      // Propriétaire du terrain
+      prop_nom: c.prop_nom || '', prop_tel: c.prop_tel || '',
+      prop_email: c.prop_email || '', prop_source: c.prop_source || '',
+      // Plan de réhabilitation
+      plan_type: c.plan_type || '', plan_date: c.plan_date || null,
+      plan_responsable: c.plan_responsable || '', plan_notes: c.plan_notes || '',
       updated_at: new Date().toISOString()
     }, { onConflict: 'terrain_id' });
     if (newNote) await db.from('crm_historique').insert({ terrain_id: id, note: newNote });
@@ -996,15 +1002,73 @@ function renderDetail(t) {
         ${t.nb_fiches    ? `<div class="i-field"><div class="i-label">Nb fiches</div><div class="i-val mono">${esc(t.nb_fiches)}</div></div>` : ''}
         ${t.date_maj     ? `<div class="i-field"><div class="i-label">Dernière mise à jour</div><div class="i-val mono">${esc(t.date_maj)}</div></div>` : ''}
         <div class="i-field full"><div class="i-label">Identifiant GTC</div><div class="i-val mono">${esc(t.id)}</div></div>
+        ${t.no_dossier   ? `<div class="i-field full"><div class="i-label">N° dossier MELCCFP</div><div class="i-val mono">${esc(t.no_dossier)}</div></div>` : ''}
         ${t.latitude && t.longitude ? `<div class="i-field full">
           <a class="maps-link" href="https://maps.google.com/?q=${esc(t.latitude)},${esc(t.longitude)}" target="_blank">📍 Voir sur Google Maps →</a>
         </div>` : ''}
       </div>
     </div>
 
-    <!-- CONTACT -->
+    <!-- PLAN DE RÉHABILITATION -->
     <div class="d-section">
-      <div class="d-section-title"><span>👤</span> Contact propriétaire</div>
+      <div class="d-section-title"><span>🧪</span> Plan de réhabilitation</div>
+      <div class="info-grid">
+        ${t.contam_sol ? `<div class="i-field full"><div class="i-label">Contaminants sol (détail)</div><div class="i-val contam">${esc(t.contam_sol)}</div></div>` : ''}
+        ${t.contam_eau ? `<div class="i-field full"><div class="i-label">Contaminants eau (détail)</div><div class="i-val" style="color:var(--blue)">${esc(t.contam_eau)}</div></div>` : ''}
+        ${t.qual_sols_avant ? `<div class="i-field"><div class="i-label">Qualité sols (avant réhab.)</div><div class="i-val contam">${esc(t.qual_sols_avant)}</div></div>` : ''}
+        ${t.qual_sols ? `<div class="i-field"><div class="i-label">Qualité sols (actuelle)</div><div class="i-val">${esc(t.qual_sols)}</div></div>` : ''}
+        ${t.aire_contaminee_m2 > 0 ? `<div class="i-field"><div class="i-label">Superficie contaminée</div><div class="i-val"><strong>${t.aire_contaminee_m2.toLocaleString('fr-CA')} m²</strong></div></div>` : ''}
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="i-label" style="width:100%;margin-bottom:4px">Suivi plan (CRM)</div>
+        <select class="c-input" id="cPlanType" style="flex:1;min-width:150px" onchange="autoSaveContact('${idJs}')">
+          <option value="">— Type de plan —</option>
+          ${['Aucun plan','Caractérisation en cours','Plan approuvé','Réhabilitation en cours','Réhabilitation complétée','Surveillance post-réhab'].map(o=>`<option value="${o}" ${(crm.plan_type||'')==o?'selected':''}>${o}</option>`).join('')}
+        </select>
+        <input class="c-input" id="cPlanDate" type="date" style="width:150px" value="${esc(crm.plan_date||'')}" onblur="autoSaveContact('${idJs}')" title="Date du plan">
+      </div>
+      <div style="margin-top:8px">
+        <input class="c-input" id="cPlanResponsable" placeholder="Responsable du plan (nom, firme...)" value="${esc(crm.plan_responsable||'')}" style="width:100%" onblur="autoSaveContact('${idJs}')">
+      </div>
+      <div style="margin-top:8px">
+        <textarea class="note-area" id="cPlanNotes" placeholder="Notes sur le plan de réhabilitation..." style="min-height:60px">${esc(crm.plan_notes||'')}</textarea>
+      </div>
+      <button class="save-btn" style="margin-top:8px" onclick="saveDossier('${idJs}')">💾 Sauvegarder</button>
+    </div>
+
+    <!-- PROPRIÉTAIRE DU TERRAIN -->
+    <div class="d-section">
+      <div class="d-section-title"><span>🏠</span> Propriétaire du terrain</div>
+      <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <a class="act-btn" style="text-decoration:none;font-size:12px;padding:7px 12px" href="https://www.registrefoncier.gouv.qc.ca/" target="_blank">🔍 Registre foncier QC</a>
+        ${t.adresse ? `<a class="act-btn" style="text-decoration:none;font-size:12px;padding:7px 12px" href="https://www.google.com/search?q=${encodeURIComponent((t.adresse||'')+' '+((t.municipalite||'').split(' - ')[1]||'')+' propriétaire terrain Québec')}" target="_blank">🌐 Recherche Google</a>` : ''}
+      </div>
+      <div class="contact-grid">
+        <div class="c-field full">
+          <div class="c-label">Nom du propriétaire</div>
+          <input class="c-input" id="cPropNom" placeholder="Nom du propriétaire inscrit au registre" value="${esc(crm.prop_nom||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field">
+          <div class="c-label">Téléphone</div>
+          <input class="c-input" id="cPropTel" placeholder="514 000-0000" value="${esc(crm.prop_tel||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field">
+          <div class="c-label">Courriel</div>
+          <input class="c-input" id="cPropEmail" placeholder="prop@domaine.ca" value="${esc(crm.prop_email||'')}" onblur="autoSaveContact('${idJs}')">
+        </div>
+        <div class="c-field full">
+          <div class="c-label">Source de l'information</div>
+          <select class="c-input" id="cPropSource" onchange="autoSaveContact('${idJs}')">
+            <option value="">— Source —</option>
+            ${['Registre foncier QC','Rôle d\'évaluation municipal','Contact direct','LinkedIn','Autre'].map(o=>`<option value="${o}" ${(crm.prop_source||'')==o?'selected':''}>${o}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT PROSPECTION -->
+    <div class="d-section">
+      <div class="d-section-title"><span>👤</span> Contact prospection</div>
       <div class="contact-grid">
         <div class="c-field">
           <div class="c-label">Nom</div>
@@ -1099,6 +1163,7 @@ function renderDetail(t) {
 // ── Auto-save contact (on blur) ───────────────────────
 function autoSaveContact(id) {
   if (!CRM[id]) CRM[id] = { historique: [] };
+  // Champs contact prospection
   const nom   = document.getElementById('cNom')?.value.trim();
   const tel   = document.getElementById('cTel')?.value.trim();
   const email = document.getElementById('cEmail')?.value.trim();
@@ -1107,9 +1172,27 @@ function autoSaveContact(id) {
   if (tel   !== undefined) CRM[id].contact_tel        = tel;
   if (email !== undefined) CRM[id].contact_email      = email;
   if (ent   !== undefined) CRM[id].contact_entreprise = ent;
+  // Champs propriétaire
+  const pNom    = document.getElementById('cPropNom')?.value.trim();
+  const pTel    = document.getElementById('cPropTel')?.value.trim();
+  const pEmail  = document.getElementById('cPropEmail')?.value.trim();
+  const pSource = document.getElementById('cPropSource')?.value;
+  if (pNom    !== undefined) CRM[id].prop_nom    = pNom;
+  if (pTel    !== undefined) CRM[id].prop_tel    = pTel;
+  if (pEmail  !== undefined) CRM[id].prop_email  = pEmail;
+  if (pSource !== undefined) CRM[id].prop_source = pSource;
+  // Champs plan de réhabilitation
+  const planType   = document.getElementById('cPlanType')?.value;
+  const planDate   = document.getElementById('cPlanDate')?.value;
+  const planResp   = document.getElementById('cPlanResponsable')?.value.trim();
+  const planNotes  = document.getElementById('cPlanNotes')?.value.trim();
+  if (planType  !== undefined) CRM[id].plan_type         = planType;
+  if (planDate  !== undefined) CRM[id].plan_date         = planDate;
+  if (planResp  !== undefined) CRM[id].plan_responsable  = planResp;
+  if (planNotes !== undefined) CRM[id].plan_notes        = planNotes;
   saveLocal();
   saveCRMToDB(id, null);
-  toast('Contact sauvegardé');
+  toast('Sauvegardé ✓');
 }
 
 // ── Sauvegarder dossier complet ───────────────────────
@@ -1121,6 +1204,14 @@ function saveDossier(id) {
   CRM[id].contact_tel        = document.getElementById('cTel')?.value.trim()        || CRM[id].contact_tel || '';
   CRM[id].contact_email      = document.getElementById('cEmail')?.value.trim()      || CRM[id].contact_email || '';
   CRM[id].contact_entreprise = document.getElementById('cEntreprise')?.value.trim() || CRM[id].contact_entreprise || '';
+  CRM[id].prop_nom           = document.getElementById('cPropNom')?.value.trim()       || CRM[id].prop_nom || '';
+  CRM[id].prop_tel           = document.getElementById('cPropTel')?.value.trim()       || CRM[id].prop_tel || '';
+  CRM[id].prop_email         = document.getElementById('cPropEmail')?.value.trim()     || CRM[id].prop_email || '';
+  CRM[id].prop_source        = document.getElementById('cPropSource')?.value           || CRM[id].prop_source || '';
+  CRM[id].plan_type          = document.getElementById('cPlanType')?.value             || CRM[id].plan_type || '';
+  CRM[id].plan_date          = document.getElementById('cPlanDate')?.value             || CRM[id].plan_date || '';
+  CRM[id].plan_responsable   = document.getElementById('cPlanResponsable')?.value.trim() || CRM[id].plan_responsable || '';
+  CRM[id].plan_notes         = document.getElementById('cPlanNotes')?.value.trim()     || CRM[id].plan_notes || '';
   CRM[id].note = note;
   const isNewNote = note && note !== oldNote;
   if (isNewNote) {
