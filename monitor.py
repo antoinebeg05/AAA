@@ -220,6 +220,58 @@ def load_surface_areas(gpkg_path):
         log.error(f"Lecture couche surface: {e}")
         return {}
 
+NOMINATIM_CACHE_FILE = Path("nominatim_cache.json")
+
+def enrich_with_nominatim(terrains, new_ids):
+    """Enrichit les nouveaux terrains avec adresse structurée via OpenStreetMap (gratuit)."""
+    if not new_ids:
+        return terrains
+    # Charger le cache existant
+    cache = {}
+    if NOMINATIM_CACHE_FILE.exists():
+        try: cache = json.load(open(NOMINATIM_CACHE_FILE, encoding="utf-8"))
+        except: pass
+    enriched = 0
+    for t in terrains:
+        if t["id"] not in new_ids or not t.get("latitude") or not t.get("longitude"):
+            continue
+        uid = t["id"]
+        if uid in cache:
+            t.update(cache[uid])
+            continue
+        try:
+            url = (f"https://nominatim.openstreetmap.org/reverse"
+                   f"?lat={t['latitude']}&lon={t['longitude']}"
+                   f"&format=json&addressdetails=1&zoom=18&accept-language=fr")
+            headers = {"User-Agent": "BiogenieGTC/1.0 (antoine.begon69@gmail.com)"}
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                addr = data.get("address", {})
+                enrichment = {
+                    "osm_display":     data.get("display_name", ""),
+                    "osm_rue":         f"{addr.get('house_number','')} {addr.get('road','')}".strip(),
+                    "osm_quartier":    addr.get("neighbourhood") or addr.get("suburb", ""),
+                    "osm_code_postal": addr.get("postcode", ""),
+                    "osm_mrc":         addr.get("county", ""),
+                    "osm_ville":       addr.get("city") or addr.get("town") or addr.get("village", ""),
+                }
+                t.update(enrichment)
+                cache[uid] = enrichment
+                enriched += 1
+                time.sleep(1.1)  # Respecter la limite Nominatim (max 1 req/sec)
+        except Exception as e:
+            log.warning(f"Nominatim {uid}: {e}")
+    # Sauvegarder le cache
+    try:
+        json.dump(cache, open(NOMINATIM_CACHE_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    except Exception as e:
+        log.error(f"Cache Nominatim: {e}")
+    if enriched:
+        log.info(f"Nominatim: {enriched} nouveau(x) terrain(s) enrichi(s)")
+    return terrains
+
+
 def detect_status_changes(terrains):
     """Détecte les changements de statut ETAT_REHAB depuis le dernier check."""
     cache = {}
@@ -323,6 +375,10 @@ def run_check():
     known   = load_snapshot()
     all_ids = {t["id"] for t in terrains}
     new_ids = all_ids - known
+
+    # Enrichissement automatique des nouveaux terrains via OpenStreetMap
+    if new_ids:
+        terrains = enrich_with_nominatim(terrains, new_ids)
 
     if not known:
         log.info(f"Premier lancement — {len(all_ids)} terrains indexés, aucune alerte envoyée")

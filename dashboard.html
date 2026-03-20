@@ -1039,9 +1039,36 @@ function renderDetail(t) {
     <!-- PROPRIÉTAIRE DU TERRAIN -->
     <div class="d-section">
       <div class="d-section-title"><span>🏠</span> Propriétaire du terrain</div>
-      <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <a class="act-btn" style="text-decoration:none;font-size:12px;padding:7px 12px" href="https://www.registrefoncier.gouv.qc.ca/" target="_blank">🔍 Registre foncier QC</a>
-        ${t.adresse ? `<a class="act-btn" style="text-decoration:none;font-size:12px;padding:7px 12px" href="https://www.google.com/search?q=${encodeURIComponent((t.adresse||'')+' '+((t.municipalite||'').split(' - ')[1]||'')+' propriétaire terrain Québec')}" target="_blank">🌐 Recherche Google</a>` : ''}
+
+      <!-- Données enrichies automatiquement par Nominatim (monitor.py) -->
+      ${t.osm_display ? `
+      <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:6px">📍 Données enrichies automatiquement (OpenStreetMap)</div>
+        <div class="info-grid">
+          ${t.osm_rue      ? `<div class="i-field full"><div class="i-label">Rue</div><div class="i-val">${esc(t.osm_rue)}</div></div>` : ''}
+          ${t.osm_quartier ? `<div class="i-field"><div class="i-label">Quartier</div><div class="i-val">${esc(t.osm_quartier)}</div></div>` : ''}
+          ${t.osm_ville    ? `<div class="i-field"><div class="i-label">Ville</div><div class="i-val">${esc(t.osm_ville)}</div></div>` : ''}
+          ${t.osm_mrc      ? `<div class="i-field"><div class="i-label">MRC</div><div class="i-val">${esc(t.osm_mrc)}</div></div>` : ''}
+          ${t.osm_code_postal ? `<div class="i-field"><div class="i-label">Code postal</div><div class="i-val mono">${esc(t.osm_code_postal)}</div></div>` : ''}
+        </div>
+      </div>` : ''}
+
+      <!-- Bouton recherche auto dans le navigateur -->
+      <div style="margin-bottom:12px">
+        <button class="act-btn act-full" id="btnNominatim" onclick="enrichirNominatim('${idJs}')">
+          <span class="act-icon">🔄</span>Rechercher données localisation automatiquement
+        </button>
+        <div id="nominatimResult"></div>
+      </div>
+
+      <!-- Liens vers outils officiels -->
+      <div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap">
+        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://appli.foncier.gouv.qc.ca/infolot/" target="_blank">🗺️ InfoLot QC</a>
+        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.registrefoncier.gouv.qc.ca/Sirf/" target="_blank">📜 Registre foncier</a>
+        ${t.latitude ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://geoegl.msp.gouv.qc.ca/igo2/apercu-qc/?center=${esc(t.longitude)},${esc(t.latitude)}&zoom=17" target="_blank">🌐 IGO Québec (cadastre)</a>` : ''}
+        ${t.latitude ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.google.com/maps?q=&layer=c&cbll=${esc(t.latitude)},${esc(t.longitude)}" target="_blank">👁️ Street View</a>` : ''}
+        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.donneesquebec.ca/recherche/dataset/roles-devaluation-fonciere-du-quebec" target="_blank">📊 Rôle d'évaluation</a>
+        ${t.adresse ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.google.com/search?q=${encodeURIComponent((t.adresse||'')+ ' ' + ((t.municipalite||'').split(' - ')[1]||'') + ' propriétaire terrain Québec')}" target="_blank">🔍 Google propriétaire</a>` : ''}
       </div>
       <div class="contact-grid">
         <div class="c-field full">
@@ -1249,6 +1276,51 @@ function desarchiver(id) {
   saveLocal(); saveCRMToDB(id, null); renderList();
   const t = ALL.find(x=>x.id===id); if (t) renderDetail(t);
 }
+// ── Enrichissement automatique via Nominatim (OpenStreetMap) ──
+async function enrichirNominatim(id) {
+  const t = ALL.find(x => x.id === id);
+  if (!t || !t.latitude || !t.longitude) { toast('Coordonnées GPS manquantes'); return; }
+  const btn = document.getElementById('btnNominatim');
+  const res = document.getElementById('nominatimResult');
+  if (btn) { btn.innerHTML = '<span class="act-icon">⏳</span>Recherche en cours...'; btn.disabled = true; }
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${t.latitude}&lon=${t.longitude}&format=json&addressdetails=1&zoom=18&accept-language=fr`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'BiogenieGTC/1.0 (biogenie.ca)' }});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const addr = data.address || {};
+    // Sauvegarder dans le CRM local
+    if (!CRM[id]) CRM[id] = { historique: [] };
+    CRM[id].osm_display     = data.display_name || '';
+    CRM[id].osm_rue         = ((addr.house_number||'') + ' ' + (addr.road||'')).trim();
+    CRM[id].osm_quartier    = addr.neighbourhood || addr.suburb || '';
+    CRM[id].osm_ville       = addr.city || addr.town || addr.village || '';
+    CRM[id].osm_mrc         = addr.county || '';
+    CRM[id].osm_code_postal = addr.postcode || '';
+    saveLocal();
+    // Afficher les résultats
+    const fields = [
+      ['Adresse complète', data.display_name],
+      ['Rue', CRM[id].osm_rue],
+      ['Quartier / Secteur', CRM[id].osm_quartier],
+      ['Ville', CRM[id].osm_ville],
+      ['MRC', CRM[id].osm_mrc],
+      ['Code postal', CRM[id].osm_code_postal],
+    ].filter(([,v]) => v);
+    if (res) res.innerHTML = `
+      <div style="background:var(--green-dim);border:1px solid var(--green-border);border-radius:8px;padding:10px 12px;margin-top:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:6px">✅ Données trouvées (OpenStreetMap)</div>
+        ${fields.map(([l,v]) => `<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--text3)">${esc(l)} : </span><span style="font-size:12px;font-weight:500">${esc(v)}</span></div>`).join('')}
+        <div style="margin-top:8px;font-size:10px;color:var(--text3)">Source : OpenStreetMap — Nominatim (données libres)</div>
+      </div>`;
+    if (btn) { btn.innerHTML = '<span class="act-icon">✓</span>Données trouvées'; }
+    toast('✅ Données de localisation enrichies');
+  } catch(e) {
+    if (res) res.innerHTML = `<div style="color:var(--red);font-size:12px;margin-top:6px">❌ Impossible de récupérer les données. Réessaie dans quelques secondes.</div>`;
+    if (btn) { btn.innerHTML = '<span class="act-icon">🔄</span>Rechercher données localisation automatiquement'; btn.disabled = false; }
+  }
+}
+
 function fermerDetailMobile() {
   const detailCol = document.getElementById('detailCol');
   if (detailCol) detailCol.classList.remove('mobile-open');
