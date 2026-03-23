@@ -495,6 +495,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
         <button class="gbtn" id="sEnc" onclick="setStatut('enc',this)">En cours</button>
       </div>
     </div>
+    <div class="f-section">
+      <label class="f-label">Mise à jour depuis</label>
+      <select class="f-select" id="fDateMaj" onchange="applyFilters()">
+        <option value="">Toutes les dates</option>
+        <option value="7">7 derniers jours</option>
+        <option value="30">30 derniers jours</option>
+        <option value="90">3 derniers mois</option>
+        <option value="180">6 derniers mois</option>
+        <option value="365">Cette année</option>
+      </select>
+    </div>
     <button class="search-btn" onclick="applyFilters()">Rechercher</button>
     <span class="reset-link" onclick="resetFilters()">↺ Réinitialiser les filtres</span>
   </div>
@@ -861,6 +872,13 @@ function getFiltered() {
     if (fEau && !(t.contaminants||'').toLowerCase().includes('eau')) return false;
     if (fSol && !(t.contaminants||'').toLowerCase().includes('sol')) return false;
     if (fNouveau && !NEW_IDS.has(t.id)) return false;
+    const fDateMaj = document.getElementById('fDateMaj').value;
+    if (fDateMaj && t.date_maj) {
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(fDateMaj));
+      const parts = t.date_maj.split(/[-\/]/);
+      const d = parts.length === 3 ? new Date(parts[0], parts[1]-1, parts[2]) : new Date(t.date_maj);
+      if (isNaN(d) || d < cutoff) return false;
+    }
     if (fStatut === 'non' && !(t.statut||'').toLowerCase().includes('non')) return false;
     if (fStatut === 'ter' && !(t.statut||'').toLowerCase().includes('termin')) return false;
     if (fStatut === 'enc' && ((t.statut||'').toLowerCase().includes('non')||(t.statut||'').toLowerCase().includes('termin')||!t.statut)) return false;
@@ -1251,7 +1269,7 @@ function switchTab(tab, btn) {
 }
 function resetFilters() {
   fStatut = ''; fNouveau = false;
-  ['fAdresse','fRegion','fMun','fContam'].forEach(id => document.getElementById(id).value = '');
+  ['fAdresse','fRegion','fMun','fContam','fDateMaj'].forEach(id => document.getElementById(id).value = '');
   ['fEau','fSol'].forEach(id => document.getElementById(id).checked = false);
   document.getElementById('sAll').className = 'gbtn on-blue';
   ['sNon','sTer','sEnc'].forEach(id => document.getElementById(id).className = 'gbtn');
