@@ -1009,113 +1009,6 @@ function renderDetail(t) {
       </div>
     </div>
 
-    <!-- PLAN DE RÉHABILITATION -->
-    <div class="d-section">
-      <div class="d-section-title"><span>🧪</span> Plan de réhabilitation</div>
-      <div class="info-grid">
-        ${t.contam_sol ? `<div class="i-field full"><div class="i-label">Contaminants sol (détail)</div><div class="i-val contam">${esc(t.contam_sol)}</div></div>` : ''}
-        ${t.contam_eau ? `<div class="i-field full"><div class="i-label">Contaminants eau (détail)</div><div class="i-val" style="color:var(--blue)">${esc(t.contam_eau)}</div></div>` : ''}
-        ${t.qual_sols_avant ? `<div class="i-field"><div class="i-label">Qualité sols (avant réhab.)</div><div class="i-val contam">${esc(t.qual_sols_avant)}</div></div>` : ''}
-        ${t.qual_sols ? `<div class="i-field"><div class="i-label">Qualité sols (actuelle)</div><div class="i-val">${esc(t.qual_sols)}</div></div>` : ''}
-        ${t.aire_contaminee_m2 > 0 ? `<div class="i-field"><div class="i-label">Superficie contaminée</div><div class="i-val"><strong>${t.aire_contaminee_m2.toLocaleString('fr-CA')} m²</strong></div></div>` : ''}
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <div class="i-label" style="width:100%;margin-bottom:4px">Suivi plan (CRM)</div>
-        <select class="c-input" id="cPlanType" style="flex:1;min-width:150px" onchange="autoSaveContact('${idJs}')">
-          <option value="">— Type de plan —</option>
-          ${['Aucun plan','Caractérisation en cours','Plan approuvé','Réhabilitation en cours','Réhabilitation complétée','Surveillance post-réhab'].map(o=>`<option value="${o}" ${(crm.plan_type||'')==o?'selected':''}>${o}</option>`).join('')}
-        </select>
-        <input class="c-input" id="cPlanDate" type="date" style="width:150px" value="${esc(crm.plan_date||'')}" onblur="autoSaveContact('${idJs}')" title="Date du plan">
-      </div>
-      <div style="margin-top:8px">
-        <input class="c-input" id="cPlanResponsable" placeholder="Responsable du plan (nom, firme...)" value="${esc(crm.plan_responsable||'')}" style="width:100%" onblur="autoSaveContact('${idJs}')">
-      </div>
-      <div style="margin-top:8px">
-        <textarea class="note-area" id="cPlanNotes" placeholder="Notes sur le plan de réhabilitation..." style="min-height:60px">${esc(crm.plan_notes||'')}</textarea>
-      </div>
-      <button class="save-btn" style="margin-top:8px" onclick="saveDossier('${idJs}')">💾 Sauvegarder</button>
-    </div>
-
-    <!-- PROPRIÉTAIRE DU TERRAIN -->
-    <div class="d-section">
-      <div class="d-section-title"><span>🏠</span> Propriétaire du terrain</div>
-
-      <!-- Données enrichies automatiquement par Nominatim (monitor.py) -->
-      ${t.osm_display ? `
-      <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;padding:10px 12px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:6px">📍 Données enrichies automatiquement (OpenStreetMap)</div>
-        <div class="info-grid">
-          ${t.osm_rue      ? `<div class="i-field full"><div class="i-label">Rue</div><div class="i-val">${esc(t.osm_rue)}</div></div>` : ''}
-          ${t.osm_quartier ? `<div class="i-field"><div class="i-label">Quartier</div><div class="i-val">${esc(t.osm_quartier)}</div></div>` : ''}
-          ${t.osm_ville    ? `<div class="i-field"><div class="i-label">Ville</div><div class="i-val">${esc(t.osm_ville)}</div></div>` : ''}
-          ${t.osm_mrc      ? `<div class="i-field"><div class="i-label">MRC</div><div class="i-val">${esc(t.osm_mrc)}</div></div>` : ''}
-          ${t.osm_code_postal ? `<div class="i-field"><div class="i-label">Code postal</div><div class="i-val mono">${esc(t.osm_code_postal)}</div></div>` : ''}
-        </div>
-      </div>` : ''}
-
-      <!-- Bouton recherche auto dans le navigateur -->
-      <div style="margin-bottom:12px">
-        <button class="act-btn act-full" id="btnNominatim" onclick="enrichirNominatim('${idJs}')">
-          <span class="act-icon">🔄</span>Rechercher données localisation automatiquement
-        </button>
-        <div id="nominatimResult"></div>
-      </div>
-
-      <!-- Liens vers outils officiels -->
-      <div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap">
-        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://appli.foncier.gouv.qc.ca/infolot/" target="_blank">🗺️ InfoLot QC</a>
-        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.registrefoncier.gouv.qc.ca/Sirf/" target="_blank">📜 Registre foncier</a>
-        ${t.latitude ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://geoegl.msp.gouv.qc.ca/igo2/apercu-qc/?center=${esc(t.longitude)},${esc(t.latitude)}&zoom=17" target="_blank">🌐 IGO Québec (cadastre)</a>` : ''}
-        ${t.latitude ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.google.com/maps?q=&layer=c&cbll=${esc(t.latitude)},${esc(t.longitude)}" target="_blank">👁️ Street View</a>` : ''}
-        <a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.donneesquebec.ca/recherche/dataset/roles-devaluation-fonciere-du-quebec" target="_blank">📊 Rôle d'évaluation</a>
-        ${t.adresse ? `<a class="act-btn" style="text-decoration:none;font-size:11px;padding:6px 10px" href="https://www.google.com/search?q=${encodeURIComponent((t.adresse||'')+ ' ' + ((t.municipalite||'').split(' - ')[1]||'') + ' propriétaire terrain Québec')}" target="_blank">🔍 Google propriétaire</a>` : ''}
-      </div>
-      <div class="contact-grid">
-        <div class="c-field full">
-          <div class="c-label">Nom du propriétaire</div>
-          <input class="c-input" id="cPropNom" placeholder="Nom du propriétaire inscrit au registre" value="${esc(crm.prop_nom||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field">
-          <div class="c-label">Téléphone</div>
-          <input class="c-input" id="cPropTel" placeholder="514 000-0000" value="${esc(crm.prop_tel||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field">
-          <div class="c-label">Courriel</div>
-          <input class="c-input" id="cPropEmail" placeholder="prop@domaine.ca" value="${esc(crm.prop_email||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field full">
-          <div class="c-label">Source de l'information</div>
-          <select class="c-input" id="cPropSource" onchange="autoSaveContact('${idJs}')">
-            <option value="">— Source —</option>
-            ${['Registre foncier QC','Rôle d\'évaluation municipal','Contact direct','LinkedIn','Autre'].map(o=>`<option value="${o}" ${(crm.prop_source||'')==o?'selected':''}>${o}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- CONTACT PROSPECTION -->
-    <div class="d-section">
-      <div class="d-section-title"><span>👤</span> Contact prospection</div>
-      <div class="contact-grid">
-        <div class="c-field">
-          <div class="c-label">Nom</div>
-          <input class="c-input" id="cNom" placeholder="Prénom Nom" value="${esc(crm.contact_nom||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field">
-          <div class="c-label">Téléphone</div>
-          <input class="c-input" id="cTel" placeholder="514 000-0000" value="${esc(crm.contact_tel||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field full">
-          <div class="c-label">Courriel</div>
-          <input class="c-input" id="cEmail" placeholder="nom@entreprise.ca" value="${esc(crm.contact_email||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-        <div class="c-field full">
-          <div class="c-label">Entreprise</div>
-          <input class="c-input" id="cEntreprise" placeholder="Nom de l'entreprise" value="${esc(crm.contact_entreprise||'')}" onblur="autoSaveContact('${idJs}')">
-        </div>
-      </div>
-    </div>
-
     <!-- NOTE -->
     <div class="d-section">
       <div class="d-section-title"><span>📝</span> Note</div>
@@ -1190,33 +1083,6 @@ function renderDetail(t) {
 // ── Auto-save contact (on blur) ───────────────────────
 function autoSaveContact(id) {
   if (!CRM[id]) CRM[id] = { historique: [] };
-  // Champs contact prospection
-  const nom   = document.getElementById('cNom')?.value.trim();
-  const tel   = document.getElementById('cTel')?.value.trim();
-  const email = document.getElementById('cEmail')?.value.trim();
-  const ent   = document.getElementById('cEntreprise')?.value.trim();
-  if (nom   !== undefined) CRM[id].contact_nom        = nom;
-  if (tel   !== undefined) CRM[id].contact_tel        = tel;
-  if (email !== undefined) CRM[id].contact_email      = email;
-  if (ent   !== undefined) CRM[id].contact_entreprise = ent;
-  // Champs propriétaire
-  const pNom    = document.getElementById('cPropNom')?.value.trim();
-  const pTel    = document.getElementById('cPropTel')?.value.trim();
-  const pEmail  = document.getElementById('cPropEmail')?.value.trim();
-  const pSource = document.getElementById('cPropSource')?.value;
-  if (pNom    !== undefined) CRM[id].prop_nom    = pNom;
-  if (pTel    !== undefined) CRM[id].prop_tel    = pTel;
-  if (pEmail  !== undefined) CRM[id].prop_email  = pEmail;
-  if (pSource !== undefined) CRM[id].prop_source = pSource;
-  // Champs plan de réhabilitation
-  const planType   = document.getElementById('cPlanType')?.value;
-  const planDate   = document.getElementById('cPlanDate')?.value;
-  const planResp   = document.getElementById('cPlanResponsable')?.value.trim();
-  const planNotes  = document.getElementById('cPlanNotes')?.value.trim();
-  if (planType  !== undefined) CRM[id].plan_type         = planType;
-  if (planDate  !== undefined) CRM[id].plan_date         = planDate;
-  if (planResp  !== undefined) CRM[id].plan_responsable  = planResp;
-  if (planNotes !== undefined) CRM[id].plan_notes        = planNotes;
   saveLocal();
   saveCRMToDB(id, null);
   toast('Sauvegardé ✓');
@@ -1227,18 +1093,6 @@ function saveDossier(id) {
   if (!CRM[id]) CRM[id] = { historique: [] };
   const note    = document.getElementById('cNote')?.value.trim() || '';
   const oldNote = CRM[id].note || '';
-  CRM[id].contact_nom        = document.getElementById('cNom')?.value.trim()        || CRM[id].contact_nom || '';
-  CRM[id].contact_tel        = document.getElementById('cTel')?.value.trim()        || CRM[id].contact_tel || '';
-  CRM[id].contact_email      = document.getElementById('cEmail')?.value.trim()      || CRM[id].contact_email || '';
-  CRM[id].contact_entreprise = document.getElementById('cEntreprise')?.value.trim() || CRM[id].contact_entreprise || '';
-  CRM[id].prop_nom           = document.getElementById('cPropNom')?.value.trim()       || CRM[id].prop_nom || '';
-  CRM[id].prop_tel           = document.getElementById('cPropTel')?.value.trim()       || CRM[id].prop_tel || '';
-  CRM[id].prop_email         = document.getElementById('cPropEmail')?.value.trim()     || CRM[id].prop_email || '';
-  CRM[id].prop_source        = document.getElementById('cPropSource')?.value           || CRM[id].prop_source || '';
-  CRM[id].plan_type          = document.getElementById('cPlanType')?.value             || CRM[id].plan_type || '';
-  CRM[id].plan_date          = document.getElementById('cPlanDate')?.value             || CRM[id].plan_date || '';
-  CRM[id].plan_responsable   = document.getElementById('cPlanResponsable')?.value.trim() || CRM[id].plan_responsable || '';
-  CRM[id].plan_notes         = document.getElementById('cPlanNotes')?.value.trim()     || CRM[id].plan_notes || '';
   CRM[id].note = note;
   const isNewNote = note && note !== oldNote;
   if (isNewNote) {
