@@ -48,6 +48,11 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python monitor.py --once
 
+      - name: Injecter les cles dans le dashboard
+        run: |
+          sed -i "s|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g" dashboard.html
+          sed -i "s|__SUPABASE_KEY__|${{ secrets.SUPABASE_KEY }}|g" dashboard.html
+
       - name: Sauvegarder les donnees dans le depot
         run: |
           git config user.name  "Biogenie Bot"
