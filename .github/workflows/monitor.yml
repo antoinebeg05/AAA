@@ -48,15 +48,25 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python monitor.py --once
 
-      - name: Injecter les cles dans le dashboard
-        run: |
-          sed -i "s|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g" dashboard.html
-          sed -i "s|__SUPABASE_KEY__|${{ secrets.SUPABASE_KEY }}|g" dashboard.html
-
-      - name: Sauvegarder les donnees dans le depot
+      - name: Sauvegarder les donnees dans main
         run: |
           git config user.name  "Biogenie Bot"
           git config user.email "bot@biogenie.ca"
           git add gtc_data.json gtc_snapshot.json gtc_status_cache.json
           git diff --staged --quiet || git commit -m "Mise a jour GTC $(date +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      - name: Deployer sur GitHub Pages (cles injectees)
+        run: |
+          mkdir -p deploy
+          cp gtc_data.json deploy/
+          cp gtc_snapshot.json deploy/ 2>/dev/null || true
+          cp gtc_status_cache.json deploy/ 2>/dev/null || true
+          sed "s|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g; s|__SUPABASE_KEY__|${{ secrets.SUPABASE_KEY }}|g" dashboard.html > deploy/dashboard.html
+          cd deploy
+          git init
+          git config user.name  "Biogenie Bot"
+          git config user.email "bot@biogenie.ca"
+          git add .
+          git commit -m "Deploy $(date +'%Y-%m-%d %H:%M UTC')"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
